@@ -1,0 +1,9 @@
+target
+.vscode
+azure.auth
+azurekeys-westeurope.props
+azureprops-westeurope.sh
+.classpath
+.factorypath
+.project
+.settings
