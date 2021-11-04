@@ -1,4 +1,4 @@
-package scc.data;
+package scc.layers;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -9,44 +9,39 @@ import com.azure.storage.blob.models.BlobItem;
 
 public class BlobStorageLayer {
 	private static BlobStorageLayer instance;
-	private String connection;
+	
+	private BlobContainerClient containerClient;
 
 	public static synchronized BlobStorageLayer getInstance() {
 		if( instance != null)
 			return instance;
 
  		String connection = System.getenv("BlobStoreConnection");
-		instance = new BlobStorageLayer(connection);
+
+		BlobContainerClient containerClient = new BlobContainerClientBuilder()
+			.connectionString(connection)
+			.containerName("images")
+			.buildClient();
+
+		instance = new BlobStorageLayer(containerClient);
 		return instance;
 	}
 	
-	public BlobStorageLayer(String connection) {
-		this.connection = connection;
+	public BlobStorageLayer(BlobContainerClient containerClient ) {
+		this.containerClient = containerClient;
 	}
 
 	public void upload(byte[] media, String key) {
 
 		BinaryData data = BinaryData.fromBytes(media);
-
-		BlobContainerClient containerClient = new BlobContainerClientBuilder()
-		.connectionString(connection)
-		.containerName("media")
-		.buildClient();
-	
 		BlobClient blob = containerClient.getBlobClient(key);
 
 		blob.upload(data);
 	}
 
 	public byte[] download(String id) {
-        
-        BlobContainerClient containerClient = new BlobContainerClientBuilder()
-		.connectionString(connection)
-		.containerName("media")
-		.buildClient();
 
 		BlobClient blob = containerClient.getBlobClient(id);
-
 		BinaryData data = blob.downloadContent();
 		byte[] media = data.toBytes();
 
@@ -54,11 +49,6 @@ public class BlobStorageLayer {
     }
 
 	public List<String> list() {
-
-		BlobContainerClient containerClient = new BlobContainerClientBuilder()
-		.connectionString(connection)
-		.containerName("media")
-		.buildClient();
 
 		List<String> images = new ArrayList<String>();
 		for (BlobItem blobItem : containerClient.listBlobs()) {

@@ -1,16 +1,16 @@
 package scc.srv;
 
 import javax.ws.rs.core.MediaType;
+import javax.ws.rs.core.Response.Status;
 import javax.ws.rs.*;
 import scc.data.*;
-import scc.utils.*;
+import scc.layers.*;
 
 @Path(MessageResources.PATH)
 public class MessageResources {
 
     public static final String PATH = "/messages";
     private CosmosDBLayer db = CosmosDBLayer.getInstance();
-    private BlobStorageLayer blob = BlobStorageLayer.getInstance();
 
     /**
      * Creates a message given its id.
@@ -18,10 +18,11 @@ public class MessageResources {
      * @return the generated id
      */
     @POST
-    @Path("")
+    @Path("/")
     @Consumes(MediaType.APPLICATION_JSON)
     public String createMessage(Message message) {
-        return null;
+        db.put(message);
+        return message.getId();
     }
 
     /**
@@ -29,9 +30,9 @@ public class MessageResources {
      * @param id - id of the message to be deleted
      */
     @DELETE
-    @Path("{id}")
+    @Path("/{id}")
     public void deleteMessage(@PathParam("id") String id) {
-
+        db.delById(id, MessageDAO.class);
     }
 
     /**
@@ -40,15 +41,18 @@ public class MessageResources {
      * @return the message
      */
     @GET
-    @Path("{id}")
+    @Path("/{id}")
     @Produces(MediaType.APPLICATION_JSON)
     public Message getMessage(@PathParam("id") String id) {
-        return null;
+        MessageDAO m = db.getById(id, MessageDAO.class);
+        if(m == null)
+            throw new WebApplicationException(Status.NOT_FOUND);
+        return new Message(m);
     }
 
     // optional - Azure Cognitive Search
     @GET
-    @Path("search")
+    @Path("/search")
     @Produces(MediaType.APPLICATION_JSON)
     public String[] searchMessages(@QueryParam("query") String query) {
         return null;
