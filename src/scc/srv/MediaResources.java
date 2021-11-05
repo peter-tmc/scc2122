@@ -25,8 +25,10 @@ public class MediaResources {
         .containerName("images")
         .buildClient();
 
-    /**
-     * Post a new image.The id of the image is its hash.
+   /**
+     * Uploads content
+     * @param contents - content to be uploaded
+     * @return the generated id
      */
     @POST
     @Path("/")
@@ -43,8 +45,9 @@ public class MediaResources {
     }
 
     /**
-     * Return the contents of an image. Throw an appropriate error message if
-     * id does not exist.
+     * Downloads the content
+     * @param id - id of the content to be downloaded
+     * @return the content
      */
     @GET
     @Path("/{id}")
@@ -60,6 +63,7 @@ public class MediaResources {
 
     /**
      * Lists the ids of images stored.
+     * @return the list
      */
     @GET
     @Path("/")

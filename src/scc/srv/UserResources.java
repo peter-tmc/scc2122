@@ -6,8 +6,12 @@ import javax.ws.rs.core.Response.Status;
 import com.azure.cosmos.models.CosmosItemResponse;
 import com.azure.cosmos.util.CosmosPagedIterable;
 
+import redis.clients.jedis.JedisPool;
+
 import java.util.*;
 import javax.ws.rs.*;
+
+import scc.cache.RedisCache;
 import scc.data.*;
 import scc.layers.*;
 
@@ -16,6 +20,7 @@ public class UserResources {
 
     public static final String PATH = "/users";
     private CosmosDBLayer db = CosmosDBLayer.getInstance();
+    private RedisCache cache = RedisCache.getInstance();
 
     /**
      * Creates a new user, given its object
@@ -28,16 +33,22 @@ public class UserResources {
     @Consumes(MediaType.APPLICATION_JSON)
     @Produces(MediaType.APPLICATION_JSON)
     public String createUser(User user) {
-
-        CosmosItemResponse<UserDAO> response = null;
-        try{
-            response = db.put(new UserDAO(user));
-        } catch(Exception e){
-             throw new WebApplicationException("418");
+        String id = user.getId();
+        /* String id = String.format("user_%s", UUID.randomUUID()); */
+        /*
+         * UUID uuid = UUID.randomUUID(); user.setId(uuid);
+         */
+        if (id != null || id.equals(""))
+            throw new WebApplicationException(Status.BAD_REQUEST);
+        for (String c : user.getChannelIds())
+            if (db.getById(c, ChannelDAO.class) == null)
+                throw new WebApplicationException(Status.BAD_REQUEST);
+        if (db.getById(id, UserDAO.class) != null)
+            throw new WebApplicationException(Status.CONFLICT);
+        else {
+            db.put(new UserDAO(user));
+            /* cache.setValue(id, user); */
         }
-        // if (response.getStatusCode() != Status.CREATED.getStatusCode())
-        //     throw new WebApplicationException(response.getStatusCode());
-
         return user.getId();
     }
 
@@ -49,13 +60,20 @@ public class UserResources {
     @DELETE
     @Path("/{id}")
     public void deleteUser(@PathParam("id") String id) {
-        CosmosItemResponse<Object> response = db.delById(id, User.class);
-        if (response.getStatusCode() != Status.NO_CONTENT.getStatusCode())
-            throw new WebApplicationException(response.getStatusCode());
-
-        new Thread(() -> {
-            db.updateDelUserMessages(id, User.class);
-        }).start();
+        if (db.getById(id, UserDAO.class) != null) {
+            db.delById(id, UserDAO.class);
+            cache.delete(id, User.class);
+            /*
+             * if (response.getStatusCode() != Status.NO_CONTENT.getStatusCode()) throw new
+             * WebApplicationException(response.getStatusCode());
+             */
+            new Thread(() -> {
+                db.updateDelUserMessages(id, User.class);
+            }).start();
+            //TODO fazer uma funcao que da update as msgs q tao em cache,
+            // para isto sq metemos o nome de quem enviou a msg no ID da msg, 
+            //para depois ser simples de procurar 
+        }
     }
 
     /**
@@ -63,13 +81,20 @@ public class UserResources {
      * 
      * @param id - id of the user to be updated
      */
-    @PATCH
+    @PUT
     @Path("/{id}")
     @Consumes(MediaType.APPLICATION_JSON)
     public void updateUser(@PathParam("id") String id, User user) {
-        CosmosItemResponse<Object> response = db.put(new UserDAO(user));
-        if (response.getStatusCode() != Status.OK.getStatusCode())
-            throw new WebApplicationException(response.getStatusCode());
+        if (db.getById(id, UserDAO.class) != null) {
+            db.delById(id, UserDAO.class);
+            db.put(new UserDAO(user));
+            /* cache.setValue(id, user); */
+        } else
+            throw new WebApplicationException(Status.BAD_REQUEST);
+        /*
+         * if (response.getStatusCode() != Status.OK.getStatusCode()) throw new
+         * WebApplicationException(response.getStatusCode());
+         */
     }
 
     /**
@@ -82,15 +107,23 @@ public class UserResources {
     @Path("/{id}")
     @Produces(MediaType.APPLICATION_JSON)
     public User getUser(@PathParam("id") String id) {
+        User u = null;
+        /*
+         * User u = cache.getValue(id, User.class); if(u == null) return u;
+         */
         UserDAO response = db.getById(id, UserDAO.class);
         if (response == null)
             throw new WebApplicationException(Status.NOT_FOUND);
-        else
-            return new User(response);
+        else {
+            u = new User(response);
+            /* cache.setValue(id, u); */
+            return u;
+        }
     }
 
     /**
      * Gets a user, given its id
+     * 
      * @param id - id of the user to retrieve
      * @return the user
      */
@@ -99,15 +132,11 @@ public class UserResources {
     @Produces(MediaType.APPLICATION_JSON)
     public List<User> listUsers() {
         CosmosPagedIterable<UserDAO> response = db.getAll(UserDAO.class);
-        if(response == null) 
+        if (response == null)
             throw new WebApplicationException(Status.NOT_FOUND);
-        else {
-            //Arrays.stream(destinations.split(",")).map(s -> parseSocketAddress(s)).collect(Collectors.toSet());
-        }
-
         List<User> l = new ArrayList<>();
         Iterator<UserDAO> it = response.iterator();
-        while(it.hasNext()) {
+        while (it.hasNext()) {
             l.add(new User(it.next()));
         }
         return l;

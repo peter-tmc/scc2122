@@ -12,6 +12,7 @@ import scc.data.User;
 public class RedisCache {
 	
 	private static JedisPool instance;
+	private static RedisCache cache;
 	
 	public synchronized static JedisPool getCachePool() {
 		if( instance != null)
@@ -34,49 +35,70 @@ public class RedisCache {
 		
 	}
 
-	public void setValue(String id, User u) {
-		ObjectMapper mapper = new ObjectMapper();
-
-		try (Jedis jedis = RedisCache. getCachePool().getResource()) {
-			jedis.set("user:"+id, mapper.writeValueAsString(u));
-		}
-		catch (Exception e) {
-			System.out.println(e.getMessage());
-		}
+	public synchronized static RedisCache getInstance() {
+		if(cache!=null)
+			return cache;
+		cache = new RedisCache();
+		return cache;
 	}
 
-	public String getValue(String id) {
+	public RedisCache() {
+	}
+
+	public <T> void setValue(String id, T item) {
+		ObjectMapper mapper = new ObjectMapper();
 		try (Jedis jedis = RedisCache.getCachePool().getResource()) {
-			return jedis.get("user:" + id);
-		}
-	}
-
-	public void add(User u) {
-		ObjectMapper mapper = new ObjectMapper();
-
-		try (Jedis jedis = RedisCache. getCachePool().getResource()) {
-			Long cnt = jedis.lpush("MostRecentUsers", mapper.writeValueAsString(u));
-			if (cnt > 5)
-				jedis.ltrim("MostRecentUsers", 0, 4);
+			jedis.set(item.getClass().getSimpleName()+":"+id, mapper.writeValueAsString(item));
 		}
 		catch (Exception e) {
 			System.out.println(e.getMessage());
 		}
 	}
 
-	public List<String> list() {
+	public <T> T getValue(String id, Class<T> type) {
+		try (Jedis jedis = RedisCache.getCachePool().getResource()) {
+			String str = jedis.get(type.getSimpleName()+":" + id);
+			ObjectMapper mapper = new ObjectMapper();
+			T item = null;
+			try {
+				item = mapper.readValue(str, type);
+			}
+			catch (Exception e) {
+				System.out.println(e.getMessage());
+			}
+			return item;
+		}
+	}
+
+	public <T> void add(T item) {
+		ObjectMapper mapper = new ObjectMapper();
+		String listName = "MostRecent"+item.getClass().getSimpleName();
 		try (Jedis jedis = RedisCache. getCachePool().getResource()) {
-			List<String> lst = jedis.lrange("MostRecentUsers", 0, -1);
+			Long cnt = jedis.lpush(listName, mapper.writeValueAsString(item));
+			if (cnt > 5)
+				jedis.ltrim(listName, 0, 4);
+		}
+		catch (Exception e) {
+			System.out.println(e.getMessage());
+		}
+	}
+
+	public <T> List<String> list(Class<T> type) {
+		try (Jedis jedis = RedisCache. getCachePool().getResource()) {
+			List<String> lst = jedis.lrange("MostRecent"+type.getSimpleName(), 0, -1);
 			return lst;
 		}
 	}
 
-	public long incr() {
+	public <T> long incr(Class<T> type) {
 		try (Jedis jedis = RedisCache. getCachePool().getResource()) {
-			return jedis.incr("NumUsers");
+			return jedis.incr("Num"+type.getSimpleName());
 		}
 	}
 
-
-	
+	public <T> void delete(String id, Class<T> type) {
+		try (Jedis jedis = RedisCache. getCachePool().getResource()) {
+			jedis.del(type.getSimpleName()+":" + id);
+		}
+	}
 }

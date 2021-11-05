@@ -5,6 +5,9 @@ import javax.ws.rs.core.Response.Status;
 
 import com.azure.cosmos.models.CosmosItemResponse;
 
+import java.util.Arrays;
+import java.util.UUID;
+
 import javax.ws.rs.*;
 import scc.data.*;
 import scc.layers.*;
@@ -21,16 +24,27 @@ public class ChannelResources {
      * @return the generated id
      */
     @POST
-    @Path("")
+    @Path("/")
     @Consumes(MediaType.APPLICATION_JSON)
     public String createChannel(Channel channel) {
+        String id = channel.getId();
 
-        CosmosItemResponse<ChannelDAO> response = db.put(new ChannelDAO(channel));
-        if(response != null)
-            if(response.getStatusCode() != Status.OK.getStatusCode())
-                throw new WebApplicationException(Status.fromStatusCode(response.getStatusCode()));
+        if(id == null || channel.getName() == null || channel.getOwner() == null) {
+            throw new WebApplicationException(Status.BAD_REQUEST);
+        }
 
-        return channel.getId();
+        if(db.getById(id, ChannelDAO.class) != null) {
+            throw new WebApplicationException(Status.CONFLICT);
+        }
+
+        for(String member : channel.getMembers()) {
+            if(db.getById(member, UserDAO.class) == null) {
+                throw new WebApplicationException(Status.BAD_REQUEST);
+            }
+        }
+
+        db.put(new ChannelDAO(channel));
+        return id;
     }
 
     /**
@@ -38,10 +52,12 @@ public class ChannelResources {
      * @param id - id of the channel to be deleted
      */
     @DELETE
-    @Path("{id}")
-    public void deleteChannel(@PathParam("id") String id){
-        CosmosItemResponse<Object> response = db.del(id);
-        throw new WebApplicationException(response.getStatusCode());
+    @Path("/{id}")
+    public void deleteChannel(@PathParam("id") String id) {
+        if(db.getById(id, ChannelDAO.class) == null) {
+            throw new WebApplicationException(Status.NOT_FOUND);
+        }        
+        db.del(id);
     }
 
     /**
@@ -49,12 +65,11 @@ public class ChannelResources {
      * @param id - id of the channel to be updated
      */
     @PATCH
-    @Path("{id}")
+    @Path("/{id}")
     @Consumes(MediaType.APPLICATION_JSON)
     public void updateChannel(@PathParam("id") String id, Channel channel){
-        CosmosItemResponse<Object> response = db.put(new ChannelDAO(channel));
-        if (response.getStatusCode() != Status.OK.getStatusCode())
-            throw new WebApplicationException(response.getStatusCode());
+        deleteChannel(id);
+        createChannel(channel);
     }
 
     /**
@@ -63,19 +78,67 @@ public class ChannelResources {
      * @return the channel
      */
     @GET
-    @Path("{id}")
+    @Path("/{id}")
     @Produces(MediaType.APPLICATION_JSON)
     public Channel getChannel(@PathParam("id") String id) {
-        return null;
+        ChannelDAO channel = db.getById(id, ChannelDAO.class);
+        if(channel == null)
+            throw new WebApplicationException(Status.NOT_FOUND);
+
+        return new Channel(channel);
+    }
+
+    /**
+     * 
+     */
+    @PUT
+    @Path("/{channelId}/members/add/{userId}")
+    public void subChannel(@PathParam("channelId") String channelId, @PathParam("userId") String userId) {
+        ChannelDAO channel = db.getById(channelId, ChannelDAO.class);
+
+        if(channel == null || db.getById(userId, UserDAO.class) == null)
+            throw new WebApplicationException(Status.NOT_FOUND);
+
+        String[] members = channel.getMembers();
+
+        if(Arrays.asList(members).contains(userId)) {
+            throw new WebApplicationException(Status.BAD_REQUEST);
+        }
+
+        String[] newMembers = Arrays.copyOf(members, members.length+1);
+        newMembers[members.length] = userId;
+        db.patch(channelId, ChannelDAO.class, "/members", newMembers.toString());
+    }
+
+    /**
+     *
+     */
+    @PUT
+    @Path("/{channelId}/members/remove/{userId}")
+    public void unsubChannel(@PathParam("channelId") String channelId, @PathParam("userId") String userId){
+        ChannelDAO channel = db.getById(channelId, ChannelDAO.class);
+
+        if(channel == null || db.getById(userId, UserDAO.class) == null)
+        throw new WebApplicationException(Status.NOT_FOUND);
+
+        String[] members = channel.getMembers();
+
+        if(!Arrays.asList(members).contains(userId)) {
+            throw new WebApplicationException(Status.BAD_REQUEST);
+        }
+
+        String[] newMembers = Arrays.stream(members).filter((val) -> val!=userId)/* .map((x) -> x) */.toArray(String[]::new);
+        db.patch(channelId, ChannelDAO.class, "/members", newMembers.toString());
     }
 
     /**
      * @return the list of the trending channels
      */
     @GET
-    @Path("trending")
+    @Path("/trending")
     @Produces(MediaType.APPLICATION_JSON)
     public String[] trendingChannels() {
+        //TODO: morrer
         return null;
     }
 }

@@ -9,6 +9,7 @@ import com.azure.cosmos.CosmosContainer;
 import com.azure.cosmos.CosmosDatabase;
 import com.azure.cosmos.models.CosmosItemRequestOptions;
 import com.azure.cosmos.models.CosmosItemResponse;
+import com.azure.cosmos.models.CosmosPatchOperations;
 import com.azure.cosmos.models.CosmosQueryRequestOptions;
 import com.azure.cosmos.models.PartitionKey;
 import com.azure.cosmos.util.CosmosPagedIterable;
@@ -95,6 +96,14 @@ public class CosmosDBLayer {
 		init(type);
 		String container = String.format("%ss", type.getSimpleName().replace("DAO", ""));
 		return currentContainer.queryItems("SELECT * FROM " + container, new CosmosQueryRequestOptions(), type);
+	}
+
+	public <T> CosmosItemResponse<T> patch(String id, Class<T> type, String field, String change) {
+		init(type);
+		
+		PartitionKey key = new PartitionKey(id);
+		CosmosPatchOperations patchOps = CosmosPatchOperations.create().replace(field, change); 
+		return currentContainer.patchItem(id, key, patchOps, type);
 	}
 
 	public <T> void updateDelUserMessages(String id, Class<T> type) {
