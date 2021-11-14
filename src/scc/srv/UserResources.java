@@ -18,6 +18,7 @@ public class UserResources {
 
     public static final String PATH = "/users";
     private CosmosDBLayer db = CosmosDBLayer.getInstance();
+    BlobStorageLayer blob = BlobStorageLayer.getInstance();
     private RedisCache cache = RedisCache.getInstance();
 
     /**
@@ -33,7 +34,7 @@ public class UserResources {
     public String createUser(User user) {
 
         String id = user.getId();
-        if (id == null || id.equals(""))
+        if (id == null || (user.getPhotoId() != null && !blob.blobExists(user.getPhotoId())))
             throw new WebApplicationException(Status.BAD_REQUEST);
 
         // podemos ver antes se o user esta na cache ou nao, se estiver na cache ja

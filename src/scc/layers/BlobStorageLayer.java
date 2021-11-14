@@ -3,6 +3,9 @@ package scc.layers;
 import java.util.ArrayList;
 import java.util.List;
 
+import javax.ws.rs.WebApplicationException;
+import javax.ws.rs.core.Response.Status;
+
 import com.azure.core.util.BinaryData;
 import com.azure.storage.blob.*;
 import com.azure.storage.blob.models.BlobItem;
@@ -18,10 +21,10 @@ public class BlobStorageLayer {
 
  		String connection = System.getenv("BlobStoreConnection");
 
-		BlobContainerClient containerClient = new BlobContainerClientBuilder()
-			.connectionString(connection)
-			.containerName("images")
-			.buildClient();
+		 BlobContainerClient containerClient = new BlobContainerClientBuilder()
+		 		.connectionString(connection)
+		 		.containerName("images")
+		 		.buildClient();
 
 		instance = new BlobStorageLayer(containerClient);
 		return instance;
@@ -31,31 +34,38 @@ public class BlobStorageLayer {
 		this.containerClient = containerClient;
 	}
 
-	public void upload(byte[] media, String key) {
+	public void upload(byte[] media, String id) {
 
-		BinaryData data = BinaryData.fromBytes(media);
-		BlobClient blob = containerClient.getBlobClient(key);
-
-		blob.upload(data);
+		BlobClient blob = containerClient.getBlobClient(id);
+        if(blob.exists()){
+            throw new WebApplicationException(Status.CONFLICT);
+        }
+        blob.upload(BinaryData.fromBytes(media));
 	}
 
 	public byte[] download(String id) {
 
 		BlobClient blob = containerClient.getBlobClient(id);
-		BinaryData data = blob.downloadContent();
-		byte[] media = data.toBytes();
+        if(!blob.exists()){
+            throw new WebApplicationException(Status.NOT_FOUND);
+        }
+        BinaryData data = blob.downloadContent();
 
-        return media;
+        return data.toBytes();
     }
 
 	public List<String> list() {
+		List<String> list = new ArrayList<>();
+        for (BlobItem image : containerClient.listBlobs()) {
+            list.add(image.getName());
+        }
 
-		List<String> images = new ArrayList<String>();
-		for (BlobItem blobItem : containerClient.listBlobs()) {
-			images.add(blobItem.getName());
-		}
+		return list;
+	}
 
-		return images;
+	public boolean blobExists(String id) {
+		BlobClient blob = containerClient.getBlobClient(id);
+        return blob.exists();
 	}
 
 }

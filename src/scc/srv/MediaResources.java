@@ -1,13 +1,7 @@
 package scc.srv;
 
 import javax.ws.rs.core.MediaType;
-import javax.ws.rs.core.Response.Status;
-
-import java.util.ArrayList;
 import java.util.List;
-import com.azure.core.util.BinaryData;
-import com.azure.storage.blob.*;
-import com.azure.storage.blob.models.BlobItem;
 
 import javax.ws.rs.*;
 import scc.layers.*;
@@ -18,12 +12,7 @@ public class MediaResources {
 
     public static final String PATH = "/media";
 
-    String connection = System.getenv("BlobStoreConnection");
-
-    BlobContainerClient containerClient = new BlobContainerClientBuilder()
-        .connectionString(connection)
-        .containerName("images")
-        .buildClient();
+    BlobStorageLayer blob = BlobStorageLayer.getInstance();
 
    /**
      * Uploads content
@@ -36,11 +25,7 @@ public class MediaResources {
     @Produces(MediaType.APPLICATION_JSON)
     public String upload(byte[] contents) {
         String id = Hash.of(contents);
-        BlobClient blob = containerClient.getBlobClient(id);
-        if(blob.exists()){
-            throw new WebApplicationException(Status.CONFLICT);
-        }
-        blob.upload(BinaryData.fromBytes(contents));
+        blob.upload(contents, id);
         return id;
     }
 
@@ -53,12 +38,7 @@ public class MediaResources {
     @Path("/{id}")
     @Produces(MediaType.APPLICATION_OCTET_STREAM)
     public byte[] download(@PathParam("id") String id) {
-        BlobClient blob = containerClient.getBlobClient(id);
-        if(!blob.exists()){
-            throw new WebApplicationException(Status.NOT_FOUND);
-        }
-        BinaryData data = blob.downloadContent();
-        return data.toBytes();
+        return blob.download(id);
     }
 
     /**
@@ -69,10 +49,6 @@ public class MediaResources {
     @Path("/")
     @Produces(MediaType.APPLICATION_JSON)
     public List<String> list() {
-        List<String> list = new ArrayList<>();
-        for (BlobItem image : containerClient.listBlobs()) {
-            list.add(image.getName());
-        }
-        return list;
+        return blob.list();
     }
 }

@@ -19,6 +19,7 @@ public class MessageResources {
 
     public static final String PATH = "/messages";
     private CosmosDBLayer db = CosmosDBLayer.getInstance();
+    private BlobStorageLayer blob = BlobStorageLayer.getInstance();
     private RedisCache cache = RedisCache.getInstance();
 
     /**
@@ -48,8 +49,9 @@ public class MessageResources {
             if (message.getReplyTo() != null && db.getById(message.getReplyTo(), MessageDAO.class) == null)
                 throw new WebApplicationException(Status.BAD_REQUEST);
 
-            // if(message.getImageId() != null)
-            // verify if message exists
+            if(message.getImageId() != null && !blob.blobExists(message.getImageId()))
+                throw new WebApplicationException(Status.BAD_REQUEST);
+            
             String randID = UUID.randomUUID().toString();
             message.setId(randID);
             db.put(new MessageDAO(message));
