@@ -7,7 +7,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import redis.clients.jedis.Jedis;
 import redis.clients.jedis.JedisPool;
 import redis.clients.jedis.JedisPoolConfig;
-import scc.data.User;
 
 public class RedisCache {
 	
@@ -19,7 +18,7 @@ public class RedisCache {
 			return instance;
 		final JedisPoolConfig poolConfig = new JedisPoolConfig();
 
-        String redisHostname = System.getenv("REDIS_HOSTNAME");
+        String redisHostname = System.getenv("REDIS_URL");
         String redisKey = System.getenv("REDIS_KEY");
 
 		poolConfig.setMaxTotal(128);

@@ -84,7 +84,7 @@ public class CosmosDBLayer {
 
 	public <T> T getById(String id, Class<T> type) {
 		init(type);
-		String container = String.format("%ss", type.getSimpleName().replace("DAO", ""));
+		String container =type.getSimpleName().replace("DAO", "s");
 		CosmosPagedIterable<T> response = currentContainer.queryItems("SELECT * FROM " + container + " WHERE " + container + ".id=\"" + id + "\"", new CosmosQueryRequestOptions(), type);
         Iterator<T> it = response.iterator();
         if(it.hasNext())
@@ -94,15 +94,26 @@ public class CosmosDBLayer {
 
 	public <T> CosmosPagedIterable<T> getAll(Class<T> type) {
 		init(type);
-		String container = String.format("%ss", type.getSimpleName().replace("DAO", ""));
+		String container = type.getSimpleName().replace("DAO", "s");
 		return currentContainer.queryItems("SELECT * FROM " + container, new CosmosQueryRequestOptions(), type);
 	}
 
-	public <T> CosmosItemResponse<T> patch(String id, Class<T> type, String field, String change) {
+	public <T> CosmosItemResponse<T> patchAdd(String id, Class<T> type, String field, String change) {
 		init(type);
 		
 		PartitionKey key = new PartitionKey(id);
-		CosmosPatchOperations patchOps = CosmosPatchOperations.create().replace(field, change); 
+
+		CosmosPatchOperations patchOps = CosmosPatchOperations.create().add(field+"/-", change);
+		return currentContainer.patchItem(id, key, patchOps, type);
+	}
+
+	public <T> CosmosItemResponse<T> patchRemove(String id, Class<T> type, String field, int index) {
+		init(type);
+		
+		PartitionKey key = new PartitionKey(id);
+
+		//CosmosItemResponse<T> item = currentContainer.readItem(id, key, type);
+		CosmosPatchOperations patchOps = CosmosPatchOperations.create().remove(field+"/"+index);
 		return currentContainer.patchItem(id, key, patchOps, type);
 	}
 

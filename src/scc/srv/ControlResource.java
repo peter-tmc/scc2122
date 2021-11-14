@@ -23,4 +23,16 @@ public class ControlResource
 		return "v: 0001";
 	}
 
+/**
+	 * This method is very uwu and owo when the uwu
+	 * .
+	 */
+	@Path("/uwu")
+	@GET
+	@Produces(MediaType.TEXT_PLAIN)
+	public String uwu() {
+		return "uwu and owo when the uwu";
+	}
+
+
 }
