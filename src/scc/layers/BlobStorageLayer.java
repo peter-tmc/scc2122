@@ -37,10 +37,10 @@ public class BlobStorageLayer {
 	public void upload(byte[] media, String id) {
 
 		BlobClient blob = containerClient.getBlobClient(id);
-        if(blob.exists()){
-            throw new WebApplicationException(Status.CONFLICT);
+        if(!blob.exists()){
+            /* throw new WebApplicationException(Status.CONFLICT); */
+			blob.upload(BinaryData.fromBytes(media));
         }
-        blob.upload(BinaryData.fromBytes(media));
 	}
 
 	public byte[] download(String id) {
@@ -49,6 +49,7 @@ public class BlobStorageLayer {
         if(!blob.exists()){
             throw new WebApplicationException(Status.NOT_FOUND);
         }
+
         BinaryData data = blob.downloadContent();
 
         return data.toBytes();

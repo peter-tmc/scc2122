@@ -1,5 +1,6 @@
 package scc.srv;
 
+import javax.ws.rs.core.Cookie;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response.Status;
 
@@ -9,6 +10,7 @@ import java.util.Arrays;
 
 import javax.ws.rs.*;
 
+import scc.authentication.CookieAuth;
 import scc.cache.RedisCache;
 import scc.data.*;
 import scc.layers.*;
@@ -19,6 +21,7 @@ public class ChannelResources {
     public static final String PATH = "channels";
     private CosmosDBLayer db = CosmosDBLayer.getInstance();
     private RedisCache cache = RedisCache.getInstance();
+    private CookieAuth auth = CookieAuth.getInstance();
 
     /**
      * Creates a channel, given its object.
@@ -29,14 +32,19 @@ public class ChannelResources {
     @POST
     @Path("/")
     @Consumes(MediaType.APPLICATION_JSON)
-    public String createChannel(Channel channel) {
+    public String createChannel(@CookieParam("scc:session") Cookie session, Channel channel) {
+
         String id = channel.getId();
         String owner = channel.getOwner();
+
         if (id == null || channel.getName() == null || owner == null)
             throw new WebApplicationException(Status.BAD_REQUEST);
-        
+
+        auth.checkCookie(session, owner);
+
         try {
-            if (channel.getMembers().length != 1 || !channel.getMembers()[0].equals(owner) || db.getById(channel.getOwner(), UserDAO.class) == null)
+            if (channel.getMembers().length != 1 || !channel.getMembers()[0].equals(owner)
+                    || db.getById(channel.getOwner(), UserDAO.class) == null)
                 throw new WebApplicationException(Status.BAD_REQUEST);
 
             db.patchAdd(owner, UserDAO.class, "/channelIds", id);
@@ -47,7 +55,7 @@ public class ChannelResources {
 
             db.put(new ChannelDAO(channel));
             ChannelDAO cdao = db.getById(id, ChannelDAO.class);
-            if(cdao != null) {
+            if (cdao != null) {
                 Channel c = new Channel(cdao);
                 cache.setValue(c.getId(), c);
             }
@@ -67,9 +75,22 @@ public class ChannelResources {
      */
     @DELETE
     @Path("/{id}")
-    public void deleteChannel(@PathParam("id") String id) {
+    public void deleteChannel(@CookieParam("scc:session") Cookie session, @PathParam("id") String id) {
+        
+        
         try {
             // TODO timer trigger para eliminar da list dos users e etc
+            Channel channel = cache.getValue(id, Channel.class);
+            if(channel == null) {
+                ChannelDAO chan = db.getById(id, ChannelDAO.class);
+                if(chan != null) {
+                    channel = new Channel(chan);
+                }
+                else {
+                    throw new WebApplicationException(Status.NOT_FOUND);
+                }
+            }
+            auth.checkCookie(session, channel.getOwner());
             db.delById(id, ChannelDAO.class);
         } catch (CosmosException e) {
             throw new WebApplicationException(e.getStatusCode());
@@ -85,35 +106,36 @@ public class ChannelResources {
     @PUT
     @Path("/{id}")
     @Consumes(MediaType.APPLICATION_JSON)
-    public void updateChannel(@PathParam("id") String id, Channel channel) {
+    public void updateChannel(@CookieParam("scc:session") Cookie session, @PathParam("id") String id, Channel channel) {
         ChannelDAO preChannel;
 
         try {
             preChannel = db.getById(id, ChannelDAO.class);
-        } catch(CosmosException e) {
+        } catch (CosmosException e) {
             throw new WebApplicationException(e.getStatusCode());
         }
 
-        if(preChannel == null || channel.getId() == null || channel.getName() == null || channel.getOwner() == null   
-            || !channel.getId().equals(preChannel.getId()) || !channel.getOwner().equals(preChannel.getOwner()) || 
-                !Arrays.equals(channel.getMembers(), preChannel.getMembers())) {
+        if (preChannel == null || channel.getId() == null || channel.getName() == null || channel.getOwner() == null
+                || !channel.getId().equals(preChannel.getId()) || !channel.getOwner().equals(preChannel.getOwner())
+                || !Arrays.equals(channel.getMembers(), preChannel.getMembers())) {
             throw new WebApplicationException(Status.BAD_REQUEST);
         }
 
-        deleteChannel(id);
+        auth.checkCookie(session, preChannel.getOwner());
 
         try {
+            db.delById(id, ChannelDAO.class);
             db.put(new ChannelDAO(channel));
 
             ChannelDAO cdao = db.getById(id, ChannelDAO.class);
-            if(cdao != null) {
+            if (cdao != null) {
                 Channel c = new Channel(cdao);
                 cache.setValue(c.getId(), c);
             }
-        } catch(CosmosException e) {
+        } catch (CosmosException e) {
             throw new WebApplicationException(e.getStatusCode());
         }
-        
+
     }
 
     /**
@@ -125,16 +147,24 @@ public class ChannelResources {
     @GET
     @Path("/{id}")
     @Produces(MediaType.APPLICATION_JSON)
-    public Channel getChannel(@PathParam("id") String id) {
+    public Channel getChannel(@CookieParam("scc:session") Cookie session, @PathParam("id") String id) {
         Channel c = cache.getValue(id, Channel.class);
-        if(c != null)
-            return c;
         try {
-            ChannelDAO channel = db.getById(id, ChannelDAO.class);
-            if(channel == null)
-                throw new WebApplicationException(Status.NOT_FOUND);
-            c = new Channel(channel);
-            cache.setValue(id, c);
+            if(c == null) {
+                ChannelDAO channel = db.getById(id, ChannelDAO.class);
+                if (channel == null)
+                    throw new WebApplicationException(Status.NOT_FOUND);
+                c = new Channel(channel);
+                cache.setValue(id, c);
+            }
+
+            if(!c.isPublicChannel()) {
+                String userId = cache.getSession(session.getValue());
+
+                if (userId == null || !Arrays.asList(c.getMembers()).contains(userId))
+                    throw new WebApplicationException(Status.UNAUTHORIZED);
+            }
+ 
             return c;
         } catch (CosmosException e) {
             throw new WebApplicationException(e.getStatusCode());
@@ -153,6 +183,7 @@ public class ChannelResources {
     }
 
     /**
+     * OPTIONAL!!! - spark
      * @return the list of suggested channels
      */
     @GET
@@ -162,27 +193,5 @@ public class ChannelResources {
         // TODO:
         return null;
     }
-
-/**
-//Throws exception if not appropriate user for operation on Channel
-
-public Session checkCookieUser(Cookie session, String id)
-throws NotAuthorizedException {
-if (session == null || session.getValue() == null)
-throw new NotAuthorizedException("No session initialized");
-Session s;
-try {
-s = cache.getSession(session.getValue());
-} catch (CacheException e) {
-throw new NotAuthorizedException("No valid session initialized");
-}
-if (s == null || s.getUser() == null || s.getUser().length() == 0)
-throw new NotAuthorizedException("No valid session initialized");
-if (!s.getUser().equals(id) && !s.getUser().equals("admin"))
-throw new NotAuthorizedException("Invalid user : " + s.getUser());
-return s;
-}
- */
-
 
 }

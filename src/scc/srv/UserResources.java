@@ -1,6 +1,9 @@
 package scc.srv;
 
+import javax.ws.rs.core.Cookie;
 import javax.ws.rs.core.MediaType;
+import javax.ws.rs.core.NewCookie;
+import javax.ws.rs.core.Response;
 import javax.ws.rs.core.Response.Status;
 
 import com.azure.cosmos.CosmosException;
@@ -9,6 +12,7 @@ import com.azure.cosmos.util.CosmosPagedIterable;
 import java.util.*;
 import javax.ws.rs.*;
 
+import scc.authentication.CookieAuth;
 import scc.cache.RedisCache;
 import scc.data.*;
 import scc.layers.*;
@@ -18,8 +22,9 @@ public class UserResources {
 
     public static final String PATH = "/users";
     private CosmosDBLayer db = CosmosDBLayer.getInstance();
-    BlobStorageLayer blob = BlobStorageLayer.getInstance();
+    private BlobStorageLayer blob = BlobStorageLayer.getInstance();
     private RedisCache cache = RedisCache.getInstance();
+    private CookieAuth auth = CookieAuth.getInstance();
 
     /**
      * Creates a new user, given its object
@@ -31,14 +36,13 @@ public class UserResources {
     @Path("/")
     @Consumes(MediaType.APPLICATION_JSON)
     @Produces(MediaType.APPLICATION_JSON)
-    public String createUser(User user) {
+    public User createUser(User user) {
 
         String id = user.getId();
         if (id == null || (user.getPhotoId() != null && !blob.blobExists(user.getPhotoId())))
             throw new WebApplicationException(Status.BAD_REQUEST);
 
-        // podemos ver antes se o user esta na cache ou nao, se estiver na cache ja
-        // sabemos que ja foi criado
+        // check if it's in cache so we know it was created
         User u = cache.getValue(id, User.class);
         if (u != null) {
             throw new WebApplicationException(Status.CONFLICT);
@@ -59,7 +63,7 @@ public class UserResources {
             throw new WebApplicationException(e.getStatusCode());
         }
 
-        return user.getId();
+        return user;
     }
 
     /**
@@ -69,10 +73,14 @@ public class UserResources {
      */
     @DELETE
     @Path("/{id}")
-    public void deleteUser(@PathParam("id") String id) {
+    public void deleteUser(@CookieParam("scc:session") Cookie session, @PathParam("id") String id) {
+
+        auth.checkCookie(session, id);
+
         try {
             db.delById(id, UserDAO.class);
             cache.delete(id, User.class);
+            cache.deleteCookie(session.getValue());
         } catch (CosmosException e) {
             throw new WebApplicationException(e.getStatusCode());
         }
@@ -93,7 +101,9 @@ public class UserResources {
     @PUT
     @Path("/{id}")
     @Consumes(MediaType.APPLICATION_JSON)
-    public void updateUser(@PathParam("id") String id, User user) {
+    public void updateUser(@CookieParam("scc:session") Cookie session, @PathParam("id") String id, User user) {
+        auth.checkCookie(session, id);
+        
         UserDAO u = null;
         try {
             u = db.getById(id, UserDAO.class);
@@ -182,6 +192,7 @@ public class UserResources {
     @Path("/{id}/channels/list")
     @Produces(MediaType.APPLICATION_JSON)
     public String[] listChannelsOfUser(@PathParam("id") String id) {
+        
         User u = getUser(id);
         return u.getChannelIds();
     }
@@ -194,9 +205,10 @@ public class UserResources {
      */
     @PUT
     @Path("{userId}/subscribe/{channelId}")
-    public void subChannel(@PathParam("userId") String userId, @PathParam("channelId") String channelId) {
+    public void subChannel(@CookieParam("scc:session") Cookie session, @PathParam("userId") String userId, @PathParam("channelId") String channelId) {
         
         ChannelDAO channel; UserDAO user;
+        auth.checkCookie(session, userId);
 
         try {
             channel = db.getById(channelId, ChannelDAO.class);
@@ -223,9 +235,10 @@ public class UserResources {
      */
     @PUT
     @Path("/{userId}/unsubscribe/{channelId}")
-    public void unsubChannel(@PathParam("userId") String userId, @PathParam("channelId") String channelId) {
+    public void unsubChannel(@CookieParam("scc:session") Cookie session, @PathParam("userId") String userId, @PathParam("channelId") String channelId) {
 
         ChannelDAO channel; UserDAO user;
+        auth.checkCookie(session, userId);
 
         try {
             channel = db.getById(channelId, ChannelDAO.class);
@@ -242,9 +255,11 @@ public class UserResources {
 
     @PUT
     @Path("/{ownerId}/channels/{channelId}/add/{userId}")
-    public void addMember(@PathParam("ownerId") String ownerId, @PathParam("channelId") String channelId, @PathParam("userId") String userId) {
+    public void addMember(@CookieParam("scc:session") Cookie session, @PathParam("ownerId") String ownerId, @PathParam("channelId") String channelId, @PathParam("userId") String userId) {
+        
         UserDAO owner, user; ChannelDAO channel;
-        //TODO check permissions com o auth
+        auth.checkCookie(session, ownerId);
+
         try {
             owner = db.getById(ownerId, UserDAO.class);
             channel = db.getById(channelId, ChannelDAO.class);
@@ -262,13 +277,13 @@ public class UserResources {
         memberAddition(channel, user);
     }
 
-
-
     @PUT
     @Path("/{ownerId}/channels/{channelId}/remove/{userId}")
-    public void removeMember(@PathParam("ownerId") String ownerId, @PathParam("channelId") String channelId, @PathParam("userId") String userId){
+    public void removeMember(@CookieParam("scc:session") Cookie session, @PathParam("ownerId") String ownerId, @PathParam("channelId") String channelId, @PathParam("userId") String userId){
+        
         UserDAO owner, user; ChannelDAO channel;
-        //TODO check permissions com o auth
+        auth.checkCookie(session, ownerId);
+ 
         try {
             owner = db.getById(ownerId, UserDAO.class);
             channel = db.getById(channelId, ChannelDAO.class);
@@ -329,40 +344,32 @@ public class UserResources {
     }
 
     
-    /**
-     * Creates a new user, given its object
-     * 
-     * @param user - user object
-     * @return the generated ID
-     */
-   /*  @POST
+    @POST
     @Path("/auth")
     @Consumes(MediaType.APPLICATION_JSON)
     @Produces(MediaType.APPLICATION_JSON)
-    //TODO mudar isto para receber um hash em vez da pass plaintext e depois comparar (se tivermos tempo)
-    public Response auth(Login userlogin) {
-        //n queria fazer isto com o ID mas penso melhor dps
-        String id = userlogin.getId();
-        String pwd = userlogin.getPwd();
-        if (id == null || id.equals("") || pwd == null || pwd.equals(""))
+    public Response authenticate(Login login) {
+        UserDAO user = null;
+        String id = login.getId(); 
+        String pwd = login.getPwd();
+        //TODO CACHE
+        if (id == null || pwd == null)
             throw new WebApplicationException(Status.BAD_REQUEST);
 
-        UserDAO userdb;
         try {
-            user = db.getById(user, UserDAO.class);
+            user = db.getById(id, UserDAO.class);
         } catch (CosmosException e) {
             throw new WebApplicationException(e.getStatusCode());
         }
 
-            // Check pwd
-            boolean pwdOk = (pwd != user.getPwd());
-
-        if( pwdOk) {
-        String uid = UUID.randomUUID().toString();
-        NewCookie cookie = new NewCookie("scc:session", uid, "/", null, "sessionid", 3600, false, true);
-        cache.putSession( new Session( uid, user.getUser()));
-        return Response.ok().cookie(cookie).build();
-        } else throw new NotAuthorizedException("Incorrect login");
-    } */
+        if(user != null && pwd.equals(user.getPwd())) {
+            String uid = UUID.randomUUID().toString();
+            NewCookie cookie = new NewCookie("scc:session", uid, "/", null, "sessionid", 3600, false, true);
+            cache.putSession(uid, id);
+            return Response.ok().cookie(cookie).build();
+        } else {
+            throw new WebApplicationException(Status.UNAUTHORIZED);
+        }        
+    }
 
 }

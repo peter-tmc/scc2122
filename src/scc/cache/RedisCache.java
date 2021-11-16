@@ -1,6 +1,7 @@
 package scc.cache;
 
 import java.util.List;
+import java.util.Set;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 
@@ -69,6 +70,22 @@ public class RedisCache {
 		}
 	}
 
+	public void putSession(String cookieId, String userId) {
+		try (Jedis jedis = RedisCache.getCachePool().getResource()) {
+			jedis.set("session:"+cookieId, userId);
+		}
+		catch (Exception e) {
+			System.out.println(e.getMessage());
+		}
+	}
+
+	public String getSession(String cookieId) {
+		try (Jedis jedis = RedisCache.getCachePool().getResource()) {
+			String str = jedis.get("session:"+cookieId);
+			return str;
+		}
+	}
+
 	public <T> void add(T item) {
 		ObjectMapper mapper = new ObjectMapper();
 		String listName = "MostRecent"+item.getClass().getSimpleName();
@@ -98,6 +115,12 @@ public class RedisCache {
 	public <T> void delete(String id, Class<T> type) {
 		try (Jedis jedis = RedisCache. getCachePool().getResource()) {
 			jedis.del(type.getSimpleName()+":" + id);
+		}
+	}
+
+	public void deleteCookie(String cookieId) {
+		try (Jedis jedis = RedisCache. getCachePool().getResource()) {
+			jedis.del("session:"+cookieId);
 		}
 	}
 }
