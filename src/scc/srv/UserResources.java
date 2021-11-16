@@ -25,6 +25,7 @@ public class UserResources {
     private BlobStorageLayer blob = BlobStorageLayer.getInstance();
     private RedisCache cache = RedisCache.getInstance();
     private CookieAuth auth = CookieAuth.getInstance();
+    private boolean cacheActive = true;
 
     /**
      * Creates a new user, given its object
@@ -39,25 +40,27 @@ public class UserResources {
     public User createUser(User user) {
 
         String id = user.getId();
-        if (id == null || (user.getPhotoId() != null && !blob.blobExists(user.getPhotoId())))
+        if (id == null || (user.getPhotoId() != null && !blob.blobExists(user.getPhotoId())) || (user.getChannelIds().length != 0))
             throw new WebApplicationException(Status.BAD_REQUEST);
 
-        // check if it's in cache so we know it was created
-        User u = cache.getValue(id, User.class);
-        if (u != null) {
-            throw new WebApplicationException(Status.CONFLICT);
+        User u = null;
+        if(cacheActive) {
+            // check if it's in cache so we know it was created
+            u = cache.getValue(id, User.class);
+            if (u != null) {
+                throw new WebApplicationException(Status.CONFLICT);
+            } 
         }
 
         try {
-            for (String c : user.getChannelIds())
-                if (db.getById(c, ChannelDAO.class) == null)
-                    throw new WebApplicationException(Status.BAD_REQUEST);
-
             db.put(new UserDAO(user));
-            UserDAO udao = db.getById(id, UserDAO.class);
-            if (udao != null) {
-                u = new User(udao);
-                cache.setValue(u.getId(), u);
+
+            if(cacheActive) {
+                UserDAO udao = db.getById(id, UserDAO.class);
+                if (udao != null) {
+                    u = new User(udao);
+                    cache.setValue(u.getId(), u);
+                }
             }
         } catch (CosmosException e) {
             throw new WebApplicationException(e.getStatusCode());
@@ -106,6 +109,9 @@ public class UserResources {
         
         UserDAO u = null;
         try {
+            if(cacheActive) {
+                cache.getValue(id, User.class);
+            }
             u = db.getById(id, UserDAO.class);
             if(!user.getId().equals(u.getId()) || !Arrays.equals(user.getChannelIds(), u.getChannelIds())) {
                 throw new WebApplicationException(Status.FORBIDDEN);
@@ -113,13 +119,16 @@ public class UserResources {
             db.delById(id, UserDAO.class);
             db.put(new UserDAO(user));
             
-            u = db.getById(id, UserDAO.class);
+            if(cacheActive)
+                u = db.getById(id, UserDAO.class);
         } catch (CosmosException e) {
             throw new WebApplicationException(e.getStatusCode());
         }
 
-        if (u != null)
+        if(cacheActive && u != null) {
             cache.setValue(id, new User(u));
+        }
+            
     }
 
     /**
@@ -254,50 +263,45 @@ public class UserResources {
     }
 
     @PUT
-    @Path("/{ownerId}/channels/{channelId}/add/{userId}")
-    public void addMember(@CookieParam("scc:session") Cookie session, @PathParam("ownerId") String ownerId, @PathParam("channelId") String channelId, @PathParam("userId") String userId) {
+    @Path("/channels/{channelId}/add/{userId}")
+    public void addMember(@CookieParam("scc:session") Cookie session, @PathParam("channelId") String channelId, @PathParam("userId") String userId) {
         
-        UserDAO owner, user; ChannelDAO channel;
-        auth.checkCookie(session, ownerId);
+        UserDAO user = null; ChannelDAO channel = null;
 
         try {
-            owner = db.getById(ownerId, UserDAO.class);
             channel = db.getById(channelId, ChannelDAO.class);
+            if(channel != null) 
+                auth.checkCookie(session, channel.getId());
             user = db.getById(userId, UserDAO.class);
         } catch (CosmosException e) {
             throw new WebApplicationException(e.getStatusCode());
         }
 
-        if (owner == null || channel == null || user == null)
+        if (channel == null || user == null)
             throw new WebApplicationException(Status.BAD_REQUEST);
-
-        if (!owner.getId().equals(channel.getOwner()))
-            throw new WebApplicationException(Status.UNAUTHORIZED);
 
         memberAddition(channel, user);
     }
 
     @PUT
-    @Path("/{ownerId}/channels/{channelId}/remove/{userId}")
-    public void removeMember(@CookieParam("scc:session") Cookie session, @PathParam("ownerId") String ownerId, @PathParam("channelId") String channelId, @PathParam("userId") String userId){
+    @Path("/channels/{channelId}/remove/{userId}")
+    public void removeMember(@CookieParam("scc:session") Cookie session, @PathParam("channelId") String channelId, @PathParam("userId") String userId){
         
-        UserDAO owner, user; ChannelDAO channel;
-        auth.checkCookie(session, ownerId);
+        UserDAO user = null; ChannelDAO channel = null;
  
         try {
-            owner = db.getById(ownerId, UserDAO.class);
             channel = db.getById(channelId, ChannelDAO.class);
+            if(channel != null) 
+                auth.checkCookie(session, channel.getId());
+            
             user = db.getById(userId, UserDAO.class);
         } catch (CosmosException e) {
             throw new WebApplicationException(e.getStatusCode());
         }
 
-        if (owner == null || channel == null || user == null)
+        if (channel == null || user == null)
             throw new WebApplicationException(Status.NOT_FOUND);
-
-        if (!owner.getId().equals(channel.getOwner()))
-            throw new WebApplicationException(Status.UNAUTHORIZED);
-
+        
         memberRemoval(channel, user);
     }
 

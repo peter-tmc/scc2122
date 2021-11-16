@@ -13,6 +13,8 @@ public class RedisCache {
 	
 	private static JedisPool instance;
 	private static RedisCache cache;
+	private static final long CACHE_EXPIRATION_TIME = 30; //30 seconds for testing purposes
+	private static final long SESSION_EXPIRATION_TIME = 3600; //1 hour
 	
 	public synchronized static JedisPool getCachePool() {
 		if( instance != null)
@@ -48,7 +50,9 @@ public class RedisCache {
 	public <T> void setValue(String id, T item) {
 		ObjectMapper mapper = new ObjectMapper();
 		try (Jedis jedis = RedisCache.getCachePool().getResource()) {
-			jedis.set(item.getClass().getSimpleName()+":"+id, mapper.writeValueAsString(item));
+			String cacheId = item.getClass().getSimpleName()+":"+id;
+			jedis.set(cacheId, mapper.writeValueAsString(item));
+			jedis.expire(cacheId, CACHE_EXPIRATION_TIME);
 		}
 		catch (Exception e) {
 			System.out.println(e.getMessage());
@@ -72,7 +76,9 @@ public class RedisCache {
 
 	public void putSession(String cookieId, String userId) {
 		try (Jedis jedis = RedisCache.getCachePool().getResource()) {
-			jedis.set("session:"+cookieId, userId);
+			String cacheId = "session:"+cookieId;
+			jedis.set(cacheId, userId);
+			jedis.expire(cacheId, SESSION_EXPIRATION_TIME);
 		}
 		catch (Exception e) {
 			System.out.println(e.getMessage());

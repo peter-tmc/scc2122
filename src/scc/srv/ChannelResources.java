@@ -7,6 +7,7 @@ import javax.ws.rs.core.Response.Status;
 import com.azure.cosmos.CosmosException;
 
 import java.util.Arrays;
+import java.util.UUID;
 
 import javax.ws.rs.*;
 
@@ -34,10 +35,11 @@ public class ChannelResources {
     @Consumes(MediaType.APPLICATION_JSON)
     public String createChannel(@CookieParam("scc:session") Cookie session, Channel channel) {
 
-        String id = channel.getId();
+        String id = UUID.randomUUID().toString();
+        channel.setId(id);
         String owner = channel.getOwner();
 
-        if (id == null || channel.getName() == null || owner == null)
+        if (channel.getName() == null || owner == null)
             throw new WebApplicationException(Status.BAD_REQUEST);
 
         auth.checkCookie(session, owner);
@@ -178,19 +180,6 @@ public class ChannelResources {
     @Path("/trending")
     @Produces(MediaType.APPLICATION_JSON)
     public String[] trendingChannels() {
-        // TODO:
-        return null;
-    }
-
-    /**
-     * OPTIONAL!!! - spark
-     * @return the list of suggested channels
-     */
-    @GET
-    @Path("/suggested")
-    @Produces(MediaType.APPLICATION_JSON)
-    public String[] suggestedChannels() {
-        // TODO:
         return null;
     }
 
