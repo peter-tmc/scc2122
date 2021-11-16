@@ -52,7 +52,7 @@ public class RedisCache {
 		try (Jedis jedis = RedisCache.getCachePool().getResource()) {
 			String cacheId = item.getClass().getSimpleName()+":"+id;
 			jedis.set(cacheId, mapper.writeValueAsString(item));
-			jedis.expire(cacheId, CACHE_EXPIRATION_TIME);
+			/* jedis.expire(cacheId, CACHE_EXPIRATION_TIME); */
 		}
 		catch (Exception e) {
 			System.out.println(e.getMessage());
@@ -78,7 +78,7 @@ public class RedisCache {
 		try (Jedis jedis = RedisCache.getCachePool().getResource()) {
 			String cacheId = "session:"+cookieId;
 			jedis.set(cacheId, userId);
-			jedis.expire(cacheId, SESSION_EXPIRATION_TIME);
+			/* jedis.expire(cacheId, SESSION_EXPIRATION_TIME); */
 		}
 		catch (Exception e) {
 			System.out.println(e.getMessage());

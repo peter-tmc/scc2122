@@ -452,6 +452,8 @@ public class AzureManagement {
 							//TODO: create the collections you have in your application
 							createCosmosCollection(cosmosClient, AZURE_COSMOSDB_DATABASE, "Users", "/id",
 									null);
+							createCosmosCollection(cosmosClient,  AZURE_COSMOSDB_DATABASE, "Channels", "/id", null);
+							createCosmosCollection(cosmosClient,  AZURE_COSMOSDB_DATABASE, "Messages", "/channel", null);
 
 							System.err.println("Azure Cosmos DB resources created with success");
 

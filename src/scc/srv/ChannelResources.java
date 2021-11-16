@@ -33,7 +33,8 @@ public class ChannelResources {
     @POST
     @Path("/")
     @Consumes(MediaType.APPLICATION_JSON)
-    public String createChannel(@CookieParam("scc:session") Cookie session, Channel channel) {
+    @Produces(MediaType.APPLICATION_JSON)
+    public Channel createChannel(@CookieParam("scc:session") Cookie session, Channel channel) {
 
         String id = UUID.randomUUID().toString();
         channel.setId(id);
@@ -48,7 +49,6 @@ public class ChannelResources {
             if (channel.getMembers().length != 1 || !channel.getMembers()[0].equals(owner)
                     || db.getById(channel.getOwner(), UserDAO.class) == null)
                 throw new WebApplicationException(Status.BAD_REQUEST);
-
             db.patchAdd(owner, UserDAO.class, "/channelIds", id);
             UserDAO u = db.getById(owner, UserDAO.class);
             if (u != null) {
@@ -61,8 +61,9 @@ public class ChannelResources {
                 Channel c = new Channel(cdao);
                 cache.setValue(c.getId(), c);
             }
+            
             // TODO adicionar o channel a channelList dos membros com um HTTP trigger
-            return id;
+            return channel;
         } catch (CosmosException e) {
             int status = (e.getStatusCode() == Status.NOT_FOUND.getStatusCode()) ? Status.BAD_REQUEST.getStatusCode()
                     : e.getStatusCode();
