@@ -271,7 +271,7 @@ public class UserResources {
         try {
             channel = db.getById(channelId, ChannelDAO.class);
             if(channel != null) 
-                auth.checkCookie(session, channel.getId());
+                auth.checkCookie(session, channel.getOwner());
             user = db.getById(userId, UserDAO.class);
         } catch (CosmosException e) {
             throw new WebApplicationException(e.getStatusCode());
@@ -292,7 +292,7 @@ public class UserResources {
         try {
             channel = db.getById(channelId, ChannelDAO.class);
             if(channel != null) 
-                auth.checkCookie(session, channel.getId());
+                auth.checkCookie(session, channel.getOwner());
             
             user = db.getById(userId, UserDAO.class);
         } catch (CosmosException e) {
