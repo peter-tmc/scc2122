@@ -32,4 +32,12 @@ public class CookieAuth {
         return s;
     }
 
+    public void putSession(String cookieId, String userId) {
+        cache.putSession(cookieId, userId);
+    }
+
+    public String getSession(String cookieId) {
+        return cache.getSession(cookieId);
+    }
+
 }

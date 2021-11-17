@@ -8,6 +8,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import redis.clients.jedis.Jedis;
 import redis.clients.jedis.JedisPool;
 import redis.clients.jedis.JedisPoolConfig;
+import scc.data.*;
 
 public class RedisCache {
 	
@@ -52,7 +53,7 @@ public class RedisCache {
 		try (Jedis jedis = RedisCache.getCachePool().getResource()) {
 			String cacheId = item.getClass().getSimpleName()+":"+id;
 			jedis.set(cacheId, mapper.writeValueAsString(item));
-			/* jedis.expire(cacheId, CACHE_EXPIRATION_TIME); */
+			jedis.expire(cacheId, CACHE_EXPIRATION_TIME);
 		}
 		catch (Exception e) {
 			System.out.println(e.getMessage());
@@ -78,7 +79,7 @@ public class RedisCache {
 		try (Jedis jedis = RedisCache.getCachePool().getResource()) {
 			String cacheId = "session:"+cookieId;
 			jedis.set(cacheId, userId);
-			/* jedis.expire(cacheId, SESSION_EXPIRATION_TIME); */
+			jedis.expire(cacheId, SESSION_EXPIRATION_TIME);
 		}
 		catch (Exception e) {
 			System.out.println(e.getMessage());
@@ -127,6 +128,18 @@ public class RedisCache {
 	public void deleteCookie(String cookieId) {
 		try (Jedis jedis = RedisCache. getCachePool().getResource()) {
 			jedis.del("session:"+cookieId);
+		}
+	}
+
+	public void incrementLeaderboard(String id) {
+		try (Jedis jedis = RedisCache. getCachePool().getResource()) {
+			jedis.zincrby("leaderboard", 1, id);
+		}
+	}
+
+	public String[] getTrendingChannels() {
+		try (Jedis jedis = RedisCache. getCachePool().getResource()) {
+			return (jedis.zrevrange("leaderboard", 0, 4).toArray(new String[5]));
 		}
 	}
 }

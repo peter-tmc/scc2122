@@ -7,6 +7,7 @@ import javax.ws.rs.core.Response.Status;
 import com.azure.cosmos.CosmosException;
 
 import java.util.Arrays;
+import java.util.List;
 import java.util.UUID;
 
 import javax.ws.rs.*;
@@ -20,9 +21,9 @@ import scc.layers.*;
 public class ChannelResources {
 
     public static final String PATH = "channels";
-    private CosmosDBLayer db = CosmosDBLayer.getInstance();
     private RedisCache cache = RedisCache.getInstance();
     private CookieAuth auth = CookieAuth.getInstance();
+    private DataLayer data = DataLayer.getInstance();
 
     /**
      * Creates a channel, given its object.
@@ -36,39 +37,24 @@ public class ChannelResources {
     @Produces(MediaType.APPLICATION_JSON)
     public Channel createChannel(@CookieParam("scc:session") Cookie session, Channel channel) {
 
+        String owner = channel.getOwner();
         String id = UUID.randomUUID().toString();
         channel.setId(id);
-        String owner = channel.getOwner();
-
-        if (channel.getName() == null || owner == null)
-            throw new WebApplicationException(Status.BAD_REQUEST);
 
         auth.checkCookie(session, owner);
-
-        try {
-            if (channel.getMembers().length != 1 || !channel.getMembers()[0].equals(owner)
-                    || db.getById(channel.getOwner(), UserDAO.class) == null)
-                throw new WebApplicationException(Status.BAD_REQUEST);
-            db.patchAdd(owner, UserDAO.class, "/channelIds", id);
-            UserDAO u = db.getById(owner, UserDAO.class);
-            if (u != null) {
-                cache.setValue(owner, new User(u));
-            }
-
-            db.put(new ChannelDAO(channel));
-            ChannelDAO cdao = db.getById(id, ChannelDAO.class);
-            if (cdao != null) {
-                Channel c = new Channel(cdao);
-                cache.setValue(c.getId(), c);
-            }
+       
+        if (channel.getName() == null || owner == null || channel.getMembers().length != 1 || 
+            !channel.getMembers()[0].equals(owner) || data.get(channel.getOwner(), User.class, UserDAO.class) == null)
+            throw new WebApplicationException(Status.BAD_REQUEST);
             
+        try {
+            data.put(channel.getId(), channel, new ChannelDAO(channel), Channel.class, ChannelDAO.class);
+            data.patchAdd(owner, User.class, UserDAO.class, "/channelIds", id);
             // TODO adicionar o channel a channelList dos membros com um HTTP trigger
-            return channel;
         } catch (CosmosException e) {
-            int status = (e.getStatusCode() == Status.NOT_FOUND.getStatusCode()) ? Status.BAD_REQUEST.getStatusCode()
-                    : e.getStatusCode();
-            throw new WebApplicationException(status);
+            throw new WebApplicationException(e.getStatusCode());
         }
+        return channel;
     }
 
     /**
@@ -80,25 +66,18 @@ public class ChannelResources {
     @Path("/{id}")
     public void deleteChannel(@CookieParam("scc:session") Cookie session, @PathParam("id") String id) {
         
-        
+        // TODO timer trigger para eliminar da list dos users e etc
+        Channel channel = data.get(id, Channel.class, ChannelDAO.class);
+        if(channel == null)
+            throw new WebApplicationException(Status.NOT_FOUND);
+
+        auth.checkCookie(session, channel.getOwner());
+
         try {
-            // TODO timer trigger para eliminar da list dos users e etc
-            Channel channel = cache.getValue(id, Channel.class);
-            if(channel == null) {
-                ChannelDAO chan = db.getById(id, ChannelDAO.class);
-                if(chan != null) {
-                    channel = new Channel(chan);
-                }
-                else {
-                    throw new WebApplicationException(Status.NOT_FOUND);
-                }
-            }
-            auth.checkCookie(session, channel.getOwner());
-            db.delById(id, ChannelDAO.class);
+            data.delete(id, Channel.class, ChannelDAO.class);
         } catch (CosmosException e) {
             throw new WebApplicationException(e.getStatusCode());
         }
-        cache.delete(id, Channel.class);
     }
 
     /**
@@ -110,13 +89,8 @@ public class ChannelResources {
     @Path("/{id}")
     @Consumes(MediaType.APPLICATION_JSON)
     public void updateChannel(@CookieParam("scc:session") Cookie session, @PathParam("id") String id, Channel channel) {
-        ChannelDAO preChannel;
 
-        try {
-            preChannel = db.getById(id, ChannelDAO.class);
-        } catch (CosmosException e) {
-            throw new WebApplicationException(e.getStatusCode());
-        }
+        Channel preChannel = data.get(id, Channel.class, ChannelDAO.class);
 
         if (preChannel == null || channel.getId() == null || channel.getName() == null || channel.getOwner() == null
                 || !channel.getId().equals(preChannel.getId()) || !channel.getOwner().equals(preChannel.getOwner())
@@ -127,18 +101,11 @@ public class ChannelResources {
         auth.checkCookie(session, preChannel.getOwner());
 
         try {
-            db.delById(id, ChannelDAO.class);
-            db.put(new ChannelDAO(channel));
-
-            ChannelDAO cdao = db.getById(id, ChannelDAO.class);
-            if (cdao != null) {
-                Channel c = new Channel(cdao);
-                cache.setValue(c.getId(), c);
-            }
+            data.delete(id, Channel.class, ChannelDAO.class);
+            data.put(id, channel, new ChannelDAO(channel), Channel.class, ChannelDAO.class);
         } catch (CosmosException e) {
             throw new WebApplicationException(e.getStatusCode());
         }
-
     }
 
     /**
@@ -151,27 +118,20 @@ public class ChannelResources {
     @Path("/{id}")
     @Produces(MediaType.APPLICATION_JSON)
     public Channel getChannel(@CookieParam("scc:session") Cookie session, @PathParam("id") String id) {
-        Channel c = cache.getValue(id, Channel.class);
-        try {
-            if(c == null) {
-                ChannelDAO channel = db.getById(id, ChannelDAO.class);
-                if (channel == null)
-                    throw new WebApplicationException(Status.NOT_FOUND);
-                c = new Channel(channel);
-                cache.setValue(id, c);
-            }
 
-            if(!c.isPublicChannel()) {
-                String userId = cache.getSession(session.getValue());
-
-                if (userId == null || !Arrays.asList(c.getMembers()).contains(userId))
-                    throw new WebApplicationException(Status.UNAUTHORIZED);
-            }
- 
-            return c;
-        } catch (CosmosException e) {
-            throw new WebApplicationException(e.getStatusCode());
+        Channel channel = data.get(id, Channel.class, ChannelDAO.class);
+        if(channel == null) {
+            throw new WebApplicationException(Status.NOT_FOUND);
         }
+
+        if(!channel.isPublicChannel()) {
+            String userId = cache.getSession(session.getValue());
+
+            if (userId == null || !Arrays.asList(channel.getMembers()).contains(userId))
+                throw new WebApplicationException(Status.UNAUTHORIZED);
+        }
+
+        return channel;
     }
 
     /**
@@ -181,7 +141,109 @@ public class ChannelResources {
     @Path("/trending")
     @Produces(MediaType.APPLICATION_JSON)
     public String[] trendingChannels() {
-        return null;
+        return cache.getTrendingChannels();
+    }
+
+    @PUT
+    @Path("{channelId}/subscribe/{userId}")
+    public void subChannel(@CookieParam("scc:session") Cookie session, @PathParam("userId") String userId, @PathParam("channelId") String channelId) {
+        
+        auth.checkCookie(session, userId);
+
+        Channel channel = data.get(channelId, Channel.class, ChannelDAO.class);
+        User user = data.get(userId, User.class, UserDAO.class);
+
+        if (channel == null || user == null)
+            throw new WebApplicationException(Status.BAD_REQUEST);
+
+        if(!channel.isPublicChannel()) {
+            throw new WebApplicationException(Status.FORBIDDEN);
+        }
+
+        memberAddition(channel, user);
+    }
+
+    /**
+     * Unsubscribes given user to a given channel
+     * 
+     * @param id - id of the user that will subscribe
+     * @param id - id of the channel the user will subscribe to
+     */
+    @PUT
+    @Path("{channelId}/unsubscribe/{userId}")
+    public void unsubChannel(@CookieParam("scc:session") Cookie session, @PathParam("userId") String userId, @PathParam("channelId") String channelId) {
+
+        auth.checkCookie(session, userId);
+
+        Channel channel = data.get(channelId, Channel.class, ChannelDAO.class);
+        User user = data.get(userId, User.class, UserDAO.class);
+
+        if (channel == null || user == null)
+            throw new WebApplicationException(Status.BAD_REQUEST);
+
+        memberRemoval(channel, user);
+    }
+
+    @PUT
+    @Path("{channelId}/add/{userId}")
+    public void addMember(@CookieParam("scc:session") Cookie session, @PathParam("channelId") String channelId, @PathParam("userId") String userId) {
+
+        Channel channel = data.get(channelId, Channel.class, ChannelDAO.class);
+        if(channel == null) 
+            throw new WebApplicationException(Status.BAD_REQUEST);
+        
+        auth.checkCookie(session, channel.getOwner());
+
+        User user = data.get(userId, User.class, UserDAO.class);
+        if (user == null)
+            throw new WebApplicationException(Status.BAD_REQUEST);
+
+        memberAddition(channel, user);
+    }
+
+    @PUT
+    @Path("{channelId}/remove/{userId}")
+    public void removeMember(@CookieParam("scc:session") Cookie session, @PathParam("channelId") String channelId, @PathParam("userId") String userId){
+        
+        Channel channel = data.get(channelId, Channel.class, ChannelDAO.class);
+        if(channel == null) 
+            throw new WebApplicationException(Status.BAD_REQUEST);
+        
+        auth.checkCookie(session, channel.getOwner());
+
+        User user = data.get(userId, User.class, UserDAO.class);
+        if (user == null)
+            throw new WebApplicationException(Status.BAD_REQUEST);
+        
+        memberRemoval(channel, user);
+    }
+
+    private void memberAddition(Channel channel, User user) {
+        String channelId = channel.getId();
+        String userId = user.getId();
+
+        if (Arrays.asList(channel.getMembers()).contains(userId)) 
+            return; // return so the user thinks that he was added even tho he was already there
+            //throw new WebApplicationException(Status.BAD_REQUEST);
+
+        data.patchAdd(channelId, Channel.class, ChannelDAO.class, "/members", userId);
+        data.patchAdd(userId, User.class, UserDAO.class, "/channelIds", channelId);
+    }
+
+    private void memberRemoval(Channel channel, User user) {
+        String userId = user.getId();
+        String channelId = channel.getId();
+
+        List<String> membersList = Arrays.asList(channel.getMembers());
+        List<String> channelIds = Arrays.asList(user.getChannelIds());
+
+        if (!membersList.contains(userId) || channel.getOwner().equals(userId)) {
+            return;
+            //throw new WebApplicationException(Status.BAD_REQUEST);
+        }
+
+        data.patchRemove(channelId, Channel.class, ChannelDAO.class, "/members", membersList.indexOf(userId));
+        data.patchRemove(userId, User.class, UserDAO.class, "/channelIds", channelIds.indexOf(channelId));
     }
 
 }

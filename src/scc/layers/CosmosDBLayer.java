@@ -23,7 +23,6 @@ public class CosmosDBLayer {
 	private static final String CHANNELS_CONTAINER = "Channels";
 
 	private static CosmosDBLayer instance;
-
 	private String dbName;
 	private CosmosClient client;
 	private CosmosDatabase db;
@@ -45,6 +44,7 @@ public class CosmosDBLayer {
 		         .connectionSharingAcrossClientsEnabled(true)
 		         .contentResponseOnWriteEnabled(true)
 		         .buildClient();
+
 		instance = new CosmosDBLayer(client, dbName);
 		return instance;
 	}
