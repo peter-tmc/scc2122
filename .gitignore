@@ -7,3 +7,4 @@ azureprops-westeurope.sh
 .factorypath
 .project
 .settings
+artillery-tests/node_modules/
