@@ -40,20 +40,24 @@ public class MessageResources {
             throw new WebApplicationException(Status.BAD_REQUEST);
         }
 
-        User user = data.get(message.getUser(), User.class, UserDAO.class);
+        User user = data.get(message.getUser(), User.class, UserDAO.class, false);
         if(user == null)
             throw new WebApplicationException(Status.BAD_REQUEST);
 
         auth.checkCookie(session, user.getId());
 
-        Channel channel = data.get(message.getChannel(), Channel.class, ChannelDAO.class);
+        Channel channel = data.get(message.getChannel(), Channel.class, ChannelDAO.class, false);
         if (channel == null)
             throw new WebApplicationException(Status.BAD_REQUEST);
 
         if (!Arrays.asList(channel.getMembers()).contains(user.getId()))
             throw new WebApplicationException(Status.UNAUTHORIZED);
 
-        if (message.getReplyTo() != null && data.get(message.getReplyTo(), Message.class, MessageDAO.class) == null)
+        Message replyTo = data.get(message.getReplyTo(), Message.class, MessageDAO.class, false);
+        if (message.getReplyTo() != null && replyTo == null)
+            throw new WebApplicationException(Status.BAD_REQUEST);
+
+        if(replyTo != null && replyTo.getChannel() != message.getChannel())
             throw new WebApplicationException(Status.BAD_REQUEST);
 
         if (message.getImageId() != null && !blob.blobExists(message.getImageId()))
@@ -63,7 +67,7 @@ public class MessageResources {
         message.setId(randID);
 
         try {
-            data.put(message.getId(), message, new MessageDAO(message), Message.class, MessageDAO.class);
+            data.put(message.getId(), message, new MessageDAO(message), Message.class, MessageDAO.class, false);
         } catch (CosmosException e) {
             throw new WebApplicationException(e.getStatusCode());
         }
@@ -80,14 +84,15 @@ public class MessageResources {
     @Path("/{id}")
     public void deleteMessage(@CookieParam("scc:session") Cookie session, @PathParam("id") String id) {
         
-        Message message = data.get(id, Message.class, MessageDAO.class);
+        Message message = data.get(id, Message.class, MessageDAO.class, false);
         if(message == null)
             throw new WebApplicationException(Status.NOT_FOUND);
                 
         auth.checkCookie(session, message.getUser());
         
         try {
-            data.delete(id, Message.class, MessageDAO.class);
+            data.delete(id, Message.class, MessageDAO.class, false);
+            //TODO update as replies a eliminada
         } catch (CosmosException e) {
             throw new WebApplicationException(Status.BAD_REQUEST);
         }
@@ -104,11 +109,11 @@ public class MessageResources {
     @Produces(MediaType.APPLICATION_JSON)
     public Message getMessage(@CookieParam("scc:session") Cookie session, @PathParam("id") String id) {
 
-        Message message = data.get(id, Message.class, MessageDAO.class);
+        Message message = data.get(id, Message.class, MessageDAO.class, false);
         if(message == null) {
             throw new WebApplicationException(Status.NOT_FOUND);
         }
-        Channel channel = data.get(message.getChannel(), Channel.class, ChannelDAO.class);
+        Channel channel = data.get(message.getChannel(), Channel.class, ChannelDAO.class, false);
         if(channel == null) {
             throw new WebApplicationException(Status.FORBIDDEN);
         }

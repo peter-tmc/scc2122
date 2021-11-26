@@ -1,4 +1,4 @@
-package scc.layers;
+package scc.functions.src.main.java.scc.layers;
 
 import java.util.Iterator;
 
@@ -106,6 +106,15 @@ public class CosmosDBLayer {
 		return currentContainer.queryItems("SELECT * FROM " + container, new CosmosQueryRequestOptions(), type);
 	}
 
+	public <T> CosmosItemResponse<T> patch(String id, Class<T> type, String field, String change) {
+		init(type, false);
+
+		PartitionKey key = new PartitionKey(id);
+
+		CosmosPatchOperations patchOps = CosmosPatchOperations.create().replace(field, change);
+		return currentContainer.patchItem(id, key, patchOps, type);
+	}
+
 	public <T> CosmosItemResponse<T> patchAdd(String id, Class<T> type, String field, String change) {
 		init(type, false);
 
@@ -129,6 +138,23 @@ public class CosmosDBLayer {
 		init(type, false);
 		currentContainer.queryItems("UPDATE messages set userIDSender = -1 where messages.userIDSender == " + id,
 				new CosmosQueryRequestOptions(), type);
+	}
+
+	public <T> void deleteAllInPartition(Class<T> type, String partKey, boolean isFromDeleted) {
+		init(type, isFromDeleted);
+		PartitionKey partitionKey = new PartitionKey(partKey);
+		currentContainer.deleteAllItemsByPartitionKey(partitionKey, new CosmosItemRequestOptions());
+	}
+
+	public <T> CosmosPagedIterable<T> getAllByPartitionKey(Class<T> type, String partKey, boolean isFromDeleted) {
+		init(type, isFromDeleted);
+		PartitionKey partitionKey = new PartitionKey(partKey);
+		return currentContainer.readAllItems(partitionKey, type);
+	}
+
+	public CosmosPagedIterable<MessageDAO> getAllMessagesByUser(String userId) {
+		init(MessageDAO.class, false);
+		return currentContainer.queryItems("SELECT * FROM Messages WHERE user = " + userId, new CosmosQueryRequestOptions(), MessageDAO.class); 
 	}
 
 	public void close() {

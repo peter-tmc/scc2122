@@ -1,4 +1,4 @@
-package scc.layers;
+package scc.functions.src.main.java.scc.layers;
 
 import com.azure.cosmos.util.CosmosPagedIterable;
 
@@ -65,6 +65,17 @@ public class DataLayer {
             cache.delete(id, type);
     }
 
+    public <T, U> void patch(String id, Class<T> type, Class<U> typeDB, String field, String change) {
+        db.patchAdd(id, typeDB, field, change);
+
+        if (cacheActive) {
+            U itemDB = db.getById(id, typeDB, false);
+            if (itemDB != null)
+                cache.setValue(id, constructItem(itemDB, type));
+        }
+
+    }
+
     public <T, U> void patchAdd(String id, Class<T> type, Class<U> typeDB, String field, String change) {
         db.patchAdd(id, typeDB, field, change);
 
@@ -86,8 +97,19 @@ public class DataLayer {
         }
     }
 
-    public void delChannelMessages() {
+    public <T, U> void delChannelMessages(String channelId, Class<T> type, Class<U> typeDB) {
+        CosmosPagedIterable<U> messages = db.getAllByPartitionKey(typeDB, channelId, false);
+        for(U m : messages) {
+            cache.delete(constructItem(m, Message.class).getId(), type);
+        }
+        db.deleteAllInPartition(typeDB, channelId, false);
+    }
 
+    public <T, U> void updateDelUserMessages(String userId, Class<T> type, Class<U> typeDB) {
+        CosmosPagedIterable<MessageDAO> messages = db.getAllMessagesByUser(userId);
+        for(MessageDAO m : messages) {
+            db.patch(m.getId(), typeDB, "/user", "-1");
+        }  
     }
 
     private <T> T constructItem(Object item, Class<T> type) {

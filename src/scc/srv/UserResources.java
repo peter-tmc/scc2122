@@ -53,7 +53,7 @@ public class UserResources {
         }
 
         try {
-            data.put(id, user, new UserDAO(user), User.class, UserDAO.class);
+            data.put(id, user, new UserDAO(user), User.class, UserDAO.class, false);
         } catch (CosmosException e) {
             throw new WebApplicationException(e.getStatusCode());
         }
@@ -71,20 +71,23 @@ public class UserResources {
     public void deleteUser(@CookieParam("scc:session") Cookie session, @PathParam("id") String id) {
 
         auth.checkCookie(session, id);
-
+        User u = data.get(id, User.class, UserDAO.class, false);
+        if(u == null)
+            throw new WebApplicationException(Status.NOT_FOUND);
         try {
-            data.delete(id, User.class, UserDAO.class);
+            data.delete(id, User.class, UserDAO.class, false);
             cache.deleteCookie(session.getValue());
+            data.put(id, u, new UserDAO(u), User.class, UserDAO.class, true);
         } catch (CosmosException e) {
             throw new WebApplicationException(e.getStatusCode());
         }
 
-        new Thread(() -> {
+        /* new Thread(() -> {
             db.updateDelUserMessages(id, User.class);
             // TODO fazer uma funcao que da update as msgs q tao em cache,
             // para isto sq metemos o nome de quem enviou a msg no ID da msg,
             // para depois ser simples de procurar
-        }).start();
+        }).start(); */
     }
 
     /**
@@ -98,7 +101,7 @@ public class UserResources {
     public void updateUser(@CookieParam("scc:session") Cookie session, @PathParam("id") String id, User user) {
         auth.checkCookie(session, id);
 
-        User u = data.get(id, User.class, UserDAO.class);
+        User u = data.get(id, User.class, UserDAO.class, false);
         if (u == null) {
             throw new WebApplicationException(Status.BAD_REQUEST);
         }
@@ -108,8 +111,8 @@ public class UserResources {
         }
 
         try {
-            data.delete(id, User.class, UserDAO.class);
-            data.put(id, user, new UserDAO(user), User.class, UserDAO.class);
+            data.delete(id, User.class, UserDAO.class, false);
+            data.put(id, user, new UserDAO(user), User.class, UserDAO.class, false);
 
         } catch (CosmosException e) {
             throw new WebApplicationException(e.getStatusCode());
@@ -126,7 +129,7 @@ public class UserResources {
     @Path("/{id}")
     @Produces(MediaType.APPLICATION_JSON)
     public User getUser(@PathParam("id") String id) {
-        User user = data.get(id, User.class, UserDAO.class);
+        User user = data.get(id, User.class, UserDAO.class, false);
 
         if (user == null) {
             throw new WebApplicationException(Status.NOT_FOUND);
@@ -146,7 +149,7 @@ public class UserResources {
     @Produces(MediaType.APPLICATION_JSON)
     public List<User> listUsers() {
 
-        CosmosPagedIterable<UserDAO> users = data.getAll(UserDAO.class);
+        CosmosPagedIterable<UserDAO> users = data.getAll(UserDAO.class, false);
 
         List<User> l = new ArrayList<>();
         Iterator<UserDAO> it = users.iterator();
@@ -188,7 +191,7 @@ public class UserResources {
         if (id == null || pwd == null)
             throw new WebApplicationException(Status.BAD_REQUEST);
 
-        User user = data.get(id, User.class, UserDAO.class);
+        User user = data.get(id, User.class, UserDAO.class, false);
 
         if (user != null && pwd.equals(user.getPwd())) {
             String uid = UUID.randomUUID().toString();
