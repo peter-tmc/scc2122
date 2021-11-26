@@ -29,6 +29,8 @@ const path = require('path')
 var imagesIds = []
 var images = []
 var users = []
+var channels = []
+let messages = []
 
 // All endpoints starting with the following prefixes will be aggregated in the same for the statistics
 var statsRegExpr = [[/.*\/rest\/media\/.*/, "GET", "/rest/media/*"],
@@ -97,6 +99,14 @@ function loadData() {
 		str = fs.readFileSync('users.data', 'utf8')
 		users = JSON.parse(str)
 	}
+	if (fs.existsSync('channels.data')) {
+		str = fs.readFileSync('channels.data', 'utf8')
+		channels = JSON.parse(str)
+	}
+	if (fs.existsSync('messages.data')) {
+		str = fs.readFileSync('messages.data', 'utf8')
+		messages = JSON.parse(str)
+	}
 }
 
 loadData();
@@ -158,6 +168,20 @@ function genNewUserReply(requestParams, response, context, ee, next) {
 	return next()
 }
 
+
+/**
+ * Process reply for of new channels to store the id on file
+ */
+ function genNewChannelReply(requestParams, response, context, ee, next) {
+	if (response.statusCode >= 200 && response.statusCode < 300 && response.body.length > 0) {
+		let c = JSON.parse(response.body)
+		channels.push(c)
+		fs.writeFileSync('channels.data', JSON.stringify(channels));
+	}
+	return next()
+}
+
+
 function deleteUserReply(requestParams, response, context, ee, next) {
 	if (response.statusCode >= 200 && response.statusCode < 300) {
 		users.filter(function (value, index, arr) {
@@ -194,6 +218,19 @@ function selectUserSkewed(context, events, done) {
 	} else {
 		delete context.vars.user
 		delete context.vars.pwd
+	}
+	return done()
+}
+
+/**
+ * Select user
+ */
+ function selectChannelSkewed(context, events, done) {
+	if (channels.length > 0) {
+		let channel = channels.sampleSkewed()
+		context.vars.channel = user.id
+	} else {
+		delete context.vars.channel
 	}
 	return done()
 }

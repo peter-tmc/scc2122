@@ -5,7 +5,7 @@ import java.util.*;
 import com.microsoft.azure.functions.annotation.*;
 import redis.clients.jedis.Jedis;
 import scc.cache.RedisCache;
-import scc.layers.DataLayer;
+import scc.functions.src.main.java.scc.layers.DataLayer;
 import scc.data.*;
 
 import com.azure.cosmos.util.CosmosPagedIterable;
