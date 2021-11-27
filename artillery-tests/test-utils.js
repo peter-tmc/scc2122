@@ -18,7 +18,10 @@ module.exports = {
 	selectImagesIdFromMsgList,
 	random50,
 	random70,
-	deleteUserReply
+	deleteUserReply,
+	deleteChannelReply,
+	selectChannelSkewed,
+	genNewChannelReply
 }
 
 
@@ -184,9 +187,20 @@ function genNewUserReply(requestParams, response, context, ee, next) {
 
 function deleteUserReply(requestParams, response, context, ee, next) {
 	if (response.statusCode >= 200 && response.statusCode < 300) {
-		users.filter(function (value, index, arr) {
-			return value.id != context.vars.user;
+		 users = users.filter(function (currentValue, index, arr) {
+		 	return currentValue.id !== context.vars.user;
+		 });
+		fs.writeFileSync('users.data', JSON.stringify(users));
+	}
+	return next()
+}
+
+function deleteChannelReply(requestParams, response, context, ee, next) {
+	if (response.statusCode >= 200 && response.statusCode < 300) {
+		channels = channels.filter(function (value, index, arr) {
+			return value.id != context.vars.channel;
 		});
+		fs.writeFileSync('channels.data', JSON.stringify(channels));
 	}
 	return next()
 }
@@ -228,7 +242,12 @@ function selectUserSkewed(context, events, done) {
  function selectChannelSkewed(context, events, done) {
 	if (channels.length > 0) {
 		let channel = channels.sampleSkewed()
-		context.vars.channel = user.id
+		context.vars.channel = channel.id
+		context.vars.user = channel.owner
+		let user = users.filter(function (value, index, arr) {
+			return value.id == channel.owner;
+		}).pop();
+		context.vars.pwd = user.pwd
 	} else {
 		delete context.vars.channel
 	}

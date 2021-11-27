@@ -40,6 +40,7 @@ scenarios:
             capture:                     # Capturing channel id
               - json: $.id
                 as: "channelId"
+            afterResponse: genNewChannelReply
         - loop:                          # Let's add 20 users to the channel
           - function: "selectUserSkewed"
           - post:                         
@@ -76,6 +77,7 @@ scenarios:
             capture:                     # Capturing channel id
               - json: $.id
                 as: "channelId"
+            afterResponse: genNewChannelReply
         - loop:                          # Let's add 10 users to the channel
           - function: "selectUserSkewed"
           - put:                          # Add user to private channel   

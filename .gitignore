@@ -8,3 +8,7 @@ azureprops-westeurope.sh
 .project
 .settings
 artillery-tests/node_modules/
+
+*.data
+
+artillery-tests/debug

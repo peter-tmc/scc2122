@@ -33,7 +33,7 @@ scenarios:
 #        - function: "genNewChannel"
         - delete:                          # Create channel
             url: "/users/{{ user }}"
-            afterResponde: "deleteUserReply"
+            afterResponse: "deleteUserReply"
 #            headers:
 #              Content-Type: application/json
 #              Accept: application/json
