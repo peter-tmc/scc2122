@@ -175,7 +175,7 @@ function genNewUserReply(requestParams, response, context, ee, next) {
 /**
  * Process reply for of new channels to store the id on file
  */
- function genNewChannelReply(requestParams, response, context, ee, next) {
+function genNewChannelReply(requestParams, response, context, ee, next) {
 	if (response.statusCode >= 200 && response.statusCode < 300 && response.body.length > 0) {
 		let c = JSON.parse(response.body)
 		channels.push(c)
@@ -184,12 +184,26 @@ function genNewUserReply(requestParams, response, context, ee, next) {
 	return next()
 }
 
+function genNewMessageReply(requestParams, response, context, ee, next) {
+	if (response.statusCode >= 200 && response.statusCode < 300 && response.body.length > 0) {
+		let message = {
+			"id": response.body,
+			"channel": context.vars.channelId,
+			"user": context.vars.user,
+			"text": context.vars.msgText,
+			"imageId": context.vars.imageId
+		} //pode ser erro
+		messages.push(message);
+		fs.writeFileSync('messages.data', JSON.stringify(messages));
+	}
+}
+
 
 function deleteUserReply(requestParams, response, context, ee, next) {
 	if (response.statusCode >= 200 && response.statusCode < 300) {
-		 users = users.filter(function (currentValue, index, arr) {
-		 	return currentValue.id !== context.vars.user;
-		 });
+		users = users.filter(function (currentValue, index, arr) {
+			return currentValue.id !== context.vars.user;
+		});
 		fs.writeFileSync('users.data', JSON.stringify(users));
 	}
 	return next()
@@ -239,7 +253,7 @@ function selectUserSkewed(context, events, done) {
 /**
  * Select user
  */
- function selectChannelSkewed(context, events, done) {
+function selectChannelSkewed(context, events, done) {
 	if (channels.length > 0) {
 		let channel = channels.sampleSkewed()
 		context.vars.channel = channel.id
@@ -293,6 +307,49 @@ function selectChannelFromUserSkewed(context, events, done) {
  * Select a channel from the list of channelIds in a user
  */
 function selectChannelFromChannelLst(context, events, done) {
+	if (typeof context.vars.channelLst !== 'undefined' && context.vars.channelLst.length > 0)
+		context.vars.channelId = context.vars.channelLst.sample()
+	else
+		delete context.vars.channelId
+	return done()
+}
+
+/**
+ * Select a channel from the list of channelIds in a user
+ */
+function selectChannelFromChannelLstSkewed(context, events, done) {
+	if (typeof context.vars.channelLst !== 'undefined' && context.vars.channelLst.length > 0)
+		context.vars.channelId = context.vars.channelLst.sampleSkewed()
+	else
+		delete context.vars.channelId
+	return done()
+}
+
+function selectMessageFromChannel(context, events, done) {
+	if (typeof context.vars.userObj !== 'undefined' && context.vars.userObj.channelIds !== 'undefined' &&
+		context.vars.userObj.channelIds.length > 0)
+		context.vars.channelId = context.vars.userObj.channelIds.sample()
+	else
+		delete context.vars.channelId
+	return done()
+}
+
+/**
+ * Select a channel from the list of channelIds in a user
+ */
+function selectMessageFromChannelSkewed(context, events, done) {
+	if (typeof context.vars.userObj !== 'undefined' && context.vars.userObj.channelIds !== 'undefined' &&
+		context.vars.userObj.channelIds.length > 0)
+		context.vars.channelId = context.vars.userObj.channelIds.sampleSkewed()
+	else
+		delete context.vars.channelId
+	return done()
+}
+
+/**
+ * Select a channel from the list of channelIds in a user
+ */
+function selectMessageFromMessageLst(context, events, done) {
 	if (typeof context.vars.channelLst !== 'undefined' && context.vars.channelLst.length > 0)
 		context.vars.channelId = context.vars.channelLst.sample()
 	else

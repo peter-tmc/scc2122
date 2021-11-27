@@ -1,6 +1,13 @@
+#Selecionar uma mensagem para ser apagada,
+#descobrir o canal onde ela esta
+#
+#
+#
+#
+
+
 config:
   target: 'https://scc2122appwesteurope54939.azurewebsites.net/rest'
-#  target: 'http://localhost:8080/scc2122-backend/rest'
   http:
     timeout: 10
   plugins:
@@ -9,15 +16,15 @@ config:
   variables:
      metricsProcessEndpoint : "myProcessEndpoint"  # function used to aggregate endpoints for statistics
   phases:
-  - name: "Create messages"    # Create messages
+  - name: "Delete messages"    # Delete messages
     arrivalCount: 10         
     duration: 20
 
 scenarios:
-  - name: 'Create message'
+  - name: 'Delete message'
     weight: 1
     flow:
-      - loop:                         # Let's create 2000 messages
+      - loop:                         # Let's delete 2000 messages
         - function: "selectUserSkewed"
         - post:                          # First: login as a user
             url: "/users/auth"
@@ -56,6 +63,4 @@ scenarios:
               text: "{{ msgText }}"
               imageId: "{{ imageId }}"
             ifTrue: "channelId"
-            afterResponse: "genNewMessageReply"
-            #fazer funcao que vai meter na message se o response status for entre 200 e <300 e vai buscar o id ao response mas o resto vai buscar ao context vars e mete no message.data
         count: 200
