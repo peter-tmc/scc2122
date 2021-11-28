@@ -188,27 +188,14 @@ function genNewChannelReply(requestParams, response, context, ee, next) {
 	return next()
 }
 
-// function genNewMessageBefore(requestParams, context, ee, next) {
-// 	let message = {
-// 			"id" : response.body,
-// 			"channel" : context.vars.channelId,
-// 			"user" : context.vars.user̈́,
-// 			"text" : context.vars.msgText,
-// 			"imageId" : context.vars.imageId
-// 		}
-// 	messages.push(message);
-// 	fs.writeFileSync('messages.data', JSON.stringify(messages));
-// 	return next()
-// }
-
 function genNewMessageReply(requestParams, response, context, ee, next) {
 	if (response.statusCode >= 200 && response.statusCode < 300 && response.body.length > 0) {
 		let message = {
-			"id" : response.body,
-			"channel" : context.vars.channelId,
-			"user" : context.vars.user,
-			"text" : context.vars.msgText,
-			"imageId" : context.vars.imageId
+			"id": response.body,
+			"channel": context.vars.channelId,
+			"user": context.vars.user,
+			"text": context.vars.msgText,
+			"imageId": context.vars.imageId
 		}
 		messages.push(message);
 		fs.writeFileSync('messages.data', JSON.stringify(messages));
@@ -219,12 +206,38 @@ function genNewMessageReply(requestParams, response, context, ee, next) {
 
 function deleteUserReply(requestParams, response, context, ee, next) {
 	if (response.statusCode >= 200 && response.statusCode < 300) {
+		//apagar os users
 		users = users.filter(function (currentValue, index, arr) {
 			return currentValue.id !== context.vars.user;
 		});
 		fs.writeFileSync('users.data', JSON.stringify(users));
+
+		//apagar os channels que sao desse user 
+		filterChannelsDelByUser(context.vars.user)
+
+		//apagar as msgs q sao desse user
+		filterMessagesDelByUser(context.vars.user)
+
 	}
 	return next()
+}
+
+function filterChannelsDelByUser(userId) {
+	if (channels.length > 0) {
+		channels = channels.filter(function (currentValue, index, arr) {
+			return currentValue.owner !== userId;
+		});
+		fs.writeFileSync('channels.data', JSON.stringify(channels));
+	}
+}
+
+function filterMessagesDelByUser(userId) {
+	if (messages.length > 0) {
+		messages = messages.filter(function (currentValue, index, arr) {
+			return currentValue.user !== userId;
+		});
+		fs.writeFileSync('messages.data', JSON.stringify(messages));
+	}
 }
 
 function deleteChannelReply(requestParams, response, context, ee, next) {
@@ -233,6 +246,13 @@ function deleteChannelReply(requestParams, response, context, ee, next) {
 			return value.id != context.vars.channel;
 		});
 		fs.writeFileSync('channels.data', JSON.stringify(channels));
+
+		//apagar as mensagens
+		messages = messages.filter(function (currentValue, index, arr) {
+			return currentValue.channel !== context.vars.channel;
+		});
+		fs.writeFileSync('messages.data', JSON.stringify(messages));
+
 	}
 	return next()
 }
@@ -244,7 +264,7 @@ function deleteMessageReply(requestParams, response, context, ee, next) {
 		});
 		fs.writeFileSync('messages.data', JSON.stringify(messages));
 	}
-	
+
 	return next();
 }
 
@@ -284,7 +304,7 @@ function selectUserSkewed(context, events, done) {
 /**
  * Select user
  */
- function selectMessageSkewed(context, events, done) {
+function selectMessageSkewed(context, events, done) {
 	if (messages.length > 0) {
 		let message = messages.sampleSkewed()
 		context.vars.user = message.user
@@ -425,7 +445,7 @@ function genNewMessage(context, events, done) {
 	} else {
 		delete context.vars.hasImage
 	}
-	context.vars.imageId = null 
+	context.vars.imageId = null
 	return done()
 }
 
@@ -466,7 +486,7 @@ function random50(context, next) {
 }
 
 /**
- * Return true with probability 50% 
+ * Return true with probability 70% 
  */
 function random70(context, next) {
 	const continueLooping = Math.random() < 0.7

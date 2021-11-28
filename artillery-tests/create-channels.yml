@@ -17,7 +17,7 @@ scenarios:
   - name: 'Create channels'
     weight: 1
     flow:
-      - loop:                            # let's create 10 public channels - loop ... count
+      - loop:                            # let's create 10 public channels - 
         - function: "selectUserSkewed"
         - post:                          # First: login as a user
             url: "/users/auth"
@@ -41,7 +41,7 @@ scenarios:
               - json: $.id
                 as: "channelId"
             afterResponse: genNewChannelReply
-        - loop:                          # Let's add 20 users to the channel
+        - loop:                          # Let's add 20 users to the channel 
           - function: "selectUserSkewed"
           - post:                         
               url: "/users/auth"
@@ -54,7 +54,7 @@ scenarios:
               url: "/channels/{{ channelId }}/subscribe/{{ user }}"
           count: 20
         count: 10
-      - loop:                            # let's create 45 private channels - loop ... count
+      - loop:                            # let's create 45 private channels - 
         - function: "selectUserSkewed"
         - post:                          # First: login as a user
             url: "/users/auth"
