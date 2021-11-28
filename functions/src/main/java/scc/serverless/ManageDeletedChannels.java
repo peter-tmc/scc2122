@@ -1,11 +1,11 @@
-package scc.functions.src.main.java.scc.serverless;
+package scc.serverless;
 
 import java.text.SimpleDateFormat;
 import java.util.*;
 import com.microsoft.azure.functions.annotation.*;
 import redis.clients.jedis.Jedis;
 import scc.cache.RedisCache;
-import scc.functions.src.main.java.scc.layers.DataLayer;
+import scc.layers.DataLayer;
 import scc.data.*;
 
 import com.azure.cosmos.util.CosmosPagedIterable;
@@ -30,15 +30,19 @@ public class ManageDeletedChannels {
 
 		CosmosPagedIterable<ChannelDAO> deletedChannels = data.getAll(ChannelDAO.class, true);
 		for(ChannelDAO c : deletedChannels) {
-			data.delChannelMessages(c.getId(), Message.class, MessageDAO.class);
-
-			List<String> membersList = Arrays.asList(c.getMembers());
+			data.delChannelMessages(c.getId(), Message.class, MessageDAO.class); //delete messages of the deleted channel
 
 			for(String memberId : c.getMembers()) {
-				data.patchRemove(memberId, User.class, UserDAO.class, "/channelIds", membersList.indexOf(memberId));
+				User u = data.get(memberId, User.class, UserDAO.class, false);
+				if(u != null) {
+					List<String> userChannels = Arrays.asList(u.getChannelIds());
+					if(userChannels.contains(c.getId())) {
+						data.patchRemove(memberId, User.class, UserDAO.class, "/channelIds", userChannels.indexOf(c.getId())); //remove channel from all the users that were in it
+					}
+				}
 			}
 		
-			data.delete(c.getId(), Channel.class, ChannelDAO.class, true);
+			data.delete(c.getId(), c.getId(), Channel.class, ChannelDAO.class, true); //remove channel from list of deleted channels
 		}
 		
     }

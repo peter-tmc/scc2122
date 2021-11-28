@@ -21,11 +21,10 @@ import scc.layers.*;
 public class UserResources {
 
     public static final String PATH = "/users";
-    private CosmosDBLayer db = CosmosDBLayer.getInstance();
+    private DataLayer data = DataLayer.getInstance();
     private BlobStorageLayer blob = BlobStorageLayer.getInstance();
     private RedisCache cache = RedisCache.getInstance();
     private CookieAuth auth = CookieAuth.getInstance();
-    private DataLayer data = DataLayer.getInstance();
     private boolean cacheActive = true;
 
     /**
@@ -75,19 +74,12 @@ public class UserResources {
         if(u == null)
             throw new WebApplicationException(Status.NOT_FOUND);
         try {
-            data.delete(id, User.class, UserDAO.class, false);
-            cache.deleteCookie(session.getValue());
+            data.delete(id, id, User.class, UserDAO.class, false);
+            auth.deleteCookie(session.getValue());
             data.put(id, u, new UserDAO(u), User.class, UserDAO.class, true);
         } catch (CosmosException e) {
             throw new WebApplicationException(e.getStatusCode());
         }
-
-        /* new Thread(() -> {
-            db.updateDelUserMessages(id, User.class);
-            // TODO fazer uma funcao que da update as msgs q tao em cache,
-            // para isto sq metemos o nome de quem enviou a msg no ID da msg,
-            // para depois ser simples de procurar
-        }).start(); */
     }
 
     /**
@@ -111,7 +103,7 @@ public class UserResources {
         }
 
         try {
-            data.delete(id, User.class, UserDAO.class, false);
+            data.delete(id, id, User.class, UserDAO.class, false);
             data.put(id, user, new UserDAO(user), User.class, UserDAO.class, false);
 
         } catch (CosmosException e) {
@@ -196,7 +188,7 @@ public class UserResources {
         if (user != null && pwd.equals(user.getPwd())) {
             String uid = UUID.randomUUID().toString();
             NewCookie cookie = new NewCookie("scc:session", uid, "/", null, "sessionid", 3600, false, true);
-            cache.putSession(uid, id);
+            auth.putSession(uid, id);
             return Response.ok().cookie(cookie).build();
         } else {
             throw new WebApplicationException(Status.UNAUTHORIZED);

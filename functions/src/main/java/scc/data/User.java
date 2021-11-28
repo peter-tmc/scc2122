@@ -1,4 +1,4 @@
-package scc.functions.src.main.java.scc.data;
+package scc.data;
 
 import java.util.Arrays;
 

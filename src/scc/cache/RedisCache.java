@@ -1,14 +1,12 @@
 package scc.cache;
 
 import java.util.List;
-import java.util.Set;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 import redis.clients.jedis.Jedis;
 import redis.clients.jedis.JedisPool;
 import redis.clients.jedis.JedisPoolConfig;
-import scc.data.*;
 
 public class RedisCache {
 	

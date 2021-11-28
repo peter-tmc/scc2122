@@ -1,4 +1,4 @@
-package scc.functions.src.main.java.scc.layers;
+package scc.layers;
 
 import com.azure.cosmos.util.CosmosPagedIterable;
 
@@ -58,15 +58,15 @@ public class DataLayer {
         }
     }
 
-    public <T, U> void delete(String id, Class<T> type, Class<U> typeDB, boolean isFromDeleted) {
-        db.delById(id, typeDB, isFromDeleted);
+    public <T, U> void delete(String id, String partKey, Class<T> type, Class<U> typeDB, boolean isFromDeleted) {
+        db.delById(id, partKey, typeDB, isFromDeleted);
 
         if (cacheActive)
             cache.delete(id, type);
     }
 
-    public <T, U> void patch(String id, Class<T> type, Class<U> typeDB, String field, String change) {
-        db.patchAdd(id, typeDB, field, change);
+    public <T, U> void patch(String id, String partKey ,Class<T> type, Class<U> typeDB, String field, String change) {
+        db.patch(id, partKey, typeDB, field, change);
 
         if (cacheActive) {
             U itemDB = db.getById(id, typeDB, false);
@@ -108,10 +108,18 @@ public class DataLayer {
     public <T, U> void updateDelUserMessages(String userId, Class<T> type, Class<U> typeDB) {
         CosmosPagedIterable<MessageDAO> messages = db.getAllMessagesByUser(userId);
         for(MessageDAO m : messages) {
-            db.patch(m.getId(), typeDB, "/user", "-1");
+            db.patch(m.getId(), m.getChannel(), typeDB, "/user", "-1");
         }  
     }
 
+    public <T, U> void updateDelMessageReplies(String messageId, Class<T> type, Class<U> typeDB) {
+        CosmosPagedIterable<MessageDAO> messages = db.getMessageReplies(messageId);
+        for(MessageDAO m : messages) {
+            db.patch(m.getId(), m.getChannel(), typeDB, "/replyTo", "-1");
+        }  
+    }
+
+    @SuppressWarnings("unchecked")
     private <T> T constructItem(Object item, Class<T> type) {
         if (type.equals(User.class))
 			return (T) new User((UserDAO)item);

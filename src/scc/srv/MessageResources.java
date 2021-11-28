@@ -57,7 +57,7 @@ public class MessageResources {
         if (message.getReplyTo() != null && replyTo == null)
             throw new WebApplicationException(Status.BAD_REQUEST);
 
-        if(replyTo != null && replyTo.getChannel() != message.getChannel())
+        if(replyTo != null && !((replyTo.getChannel()).equals(message.getChannel())))
             throw new WebApplicationException(Status.BAD_REQUEST);
 
         if (message.getImageId() != null && !blob.blobExists(message.getImageId()))
@@ -91,8 +91,8 @@ public class MessageResources {
         auth.checkCookie(session, message.getUser());
         
         try {
-            data.delete(id, Message.class, MessageDAO.class, false);
-            //TODO update as replies a eliminada
+            data.delete(id, message.getChannel(), Message.class, MessageDAO.class, false);
+            data.put(id, message, new MessageDAO(message), Message.class, MessageDAO.class, true);
         } catch (CosmosException e) {
             throw new WebApplicationException(Status.BAD_REQUEST);
         }
@@ -118,7 +118,7 @@ public class MessageResources {
             throw new WebApplicationException(Status.FORBIDDEN);
         }
         
-        String userId = cache.getSession(session.getValue());
+        String userId = auth.getSession(session);
 
         if (userId == null || !Arrays.asList(channel.getMembers()).contains(userId))
             throw new WebApplicationException(Status.UNAUTHORIZED);

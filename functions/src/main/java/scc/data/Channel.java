@@ -1,22 +1,16 @@
-package scc.functions.src.main.java.scc.data;
+package scc.data;
 
-public class ChannelDAO {
-    private String _rid; // record id
-    private String _ts; // timestamp
+public class Channel {
     private String id;
     private String name;
     private String owner;
     private boolean publicChannel;
     private String[] members;
 
-    public ChannelDAO() {
-    }
+    public Channel() {
+	}
 
-    public ChannelDAO(Channel c) {
-        this(c.getId(), c.getName(), c.getOwner(), c.isPublicChannel(), c.getMembers());
-    }
-
-    public ChannelDAO(String id, String name, String owner, boolean publicChannel, String[] members) {
+    public Channel(String id, String name, String owner, boolean publicChannel, String[] members) {
         super();
         this.id = id;
         this.name = name;
@@ -25,20 +19,8 @@ public class ChannelDAO {
         this.members = members;
     }
 
-    public String get_rid() {
-        return this._rid;
-    }
-
-    public void set_rid(String _rid) {
-        this._rid = _rid;
-    }
-
-    public String get_ts() {
-        return this._ts;
-    }
-
-    public void set_ts(String _ts) {
-        this._ts = _ts;
+    public Channel(ChannelDAO c) {
+        this(c.getId(), c.getName(), c.getOwner(), c.isPublicChannel(), c.getMembers());
     }
 
     public String getId() {
@@ -81,9 +63,10 @@ public class ChannelDAO {
         this.members = members;
     }
 
-    @Override
+	@Override
 	public String toString() {
-		return "ChannelDAO [_rid=" + _rid + ", _ts=" + _ts + "id=" + id + ", name=" + name + ", owner=" 
-            + owner + ", publicChannel=" + publicChannel + ", members=" + members + "]";
+		return "Channel [id=" + id + ", name=" + name + ", owner=" + owner + ", publicChannel=" + publicChannel + ", members="
+				+ members + "]";
 	}
+
 }

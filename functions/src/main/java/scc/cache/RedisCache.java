@@ -1,4 +1,4 @@
-package scc.functions.src.main.java.scc.cache;
+package scc.cache;
 
 import java.util.List;
 
@@ -13,7 +13,7 @@ public class RedisCache {
 	private static JedisPool instance;
 	private static RedisCache cache;
 	private static final long CACHE_EXPIRATION_TIME = 30; //30 seconds for testing purposes
-	private static final long SESSION_EXPIRATION_TIME = 3600; //1 hour
+//	private static final long SESSION_EXPIRATION_TIME = 3600; //1 hour
 	
 	public synchronized static JedisPool getCachePool() {
 		if( instance != null)

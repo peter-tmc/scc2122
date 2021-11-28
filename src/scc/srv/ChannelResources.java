@@ -5,8 +5,11 @@ import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response.Status;
 
 import com.azure.cosmos.CosmosException;
+import com.azure.cosmos.util.CosmosPagedIterable;
 
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Iterator;
 import java.util.List;
 import java.util.UUID;
 
@@ -50,7 +53,6 @@ public class ChannelResources {
         try {
             data.put(channel.getId(), channel, new ChannelDAO(channel), Channel.class, ChannelDAO.class, false);
             data.patchAdd(owner, User.class, UserDAO.class, "/channelIds", id);
-            // TODO adicionar o channel a channelList dos membros com um HTTP trigger
         } catch (CosmosException e) {
             throw new WebApplicationException(e.getStatusCode());
         }
@@ -66,7 +68,6 @@ public class ChannelResources {
     @Path("/{id}")
     public void deleteChannel(@CookieParam("scc:session") Cookie session, @PathParam("id") String id) {
         
-        // TODO timer trigger para eliminar da list dos users e etc
         Channel channel = data.get(id, Channel.class, ChannelDAO.class, false);
         if(channel == null)
             throw new WebApplicationException(Status.NOT_FOUND);
@@ -74,7 +75,7 @@ public class ChannelResources {
         auth.checkCookie(session, channel.getOwner());
 
         try {
-            data.delete(id, Channel.class, ChannelDAO.class, false);
+            data.delete(id, id, Channel.class, ChannelDAO.class, false);
             data.put(id, channel, new ChannelDAO(channel), Channel.class, ChannelDAO.class, true);
         } catch (CosmosException e) {
             throw new WebApplicationException(e.getStatusCode());
@@ -102,7 +103,7 @@ public class ChannelResources {
         auth.checkCookie(session, preChannel.getOwner());
 
         try {
-            data.delete(id, Channel.class, ChannelDAO.class, false);
+            data.delete(id, id, Channel.class, ChannelDAO.class, false);
             data.put(id, channel, new ChannelDAO(channel), Channel.class, ChannelDAO.class, false);
         } catch (CosmosException e) {
             throw new WebApplicationException(e.getStatusCode());
@@ -126,13 +127,45 @@ public class ChannelResources {
         }
 
         if(!channel.isPublicChannel()) {
-            String userId = cache.getSession(session.getValue());
+            String userId = auth.getSession(session);
 
             if (userId == null || !Arrays.asList(channel.getMembers()).contains(userId))
                 throw new WebApplicationException(Status.UNAUTHORIZED);
         }
 
         return channel;
+    }
+
+    /**
+     * Gets a channel's messages, given its id
+     * 
+     * @param id - id of the channel
+     * @return the list of messages of the channel
+     */
+    @GET
+    @Path("/{id}/messages")
+    @Produces(MediaType.APPLICATION_JSON)
+    public List<Message> getChannelMessages(@CookieParam("scc:session") Cookie session, @PathParam("id") String id) {
+
+        Channel channel = data.get(id, Channel.class, ChannelDAO.class, false);
+        if(channel == null) {
+            throw new WebApplicationException(Status.NOT_FOUND);
+        }
+
+        String userId = auth.getSession(session);
+
+        if (userId == null || !Arrays.asList(channel.getMembers()).contains(userId))
+            throw new WebApplicationException(Status.UNAUTHORIZED);
+    
+        CosmosPagedIterable<MessageDAO> messages = data.getPartition(id, Message.class, MessageDAO.class);
+
+        List<Message> l = new ArrayList<>();
+        Iterator<MessageDAO> it = messages.iterator();
+        while (it.hasNext()) {
+            l.add(new Message(it.next()));
+        }
+
+        return l;
     }
 
     /**

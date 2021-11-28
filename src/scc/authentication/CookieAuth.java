@@ -36,8 +36,13 @@ public class CookieAuth {
         cache.putSession(cookieId, userId);
     }
 
-    public String getSession(String cookieId) {
-        return cache.getSession(cookieId);
+    public String getSession(Cookie session) {
+        if(session == null) throw new WebApplicationException(Status.UNAUTHORIZED);
+        return cache.getSession(session.getValue());
+    }
+
+    public void deleteCookie(String cookieId) {
+        cache.deleteCookie(cookieId);
     }
 
 }

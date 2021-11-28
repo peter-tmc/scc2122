@@ -1,4 +1,4 @@
-package scc.functions.src.main.java.scc.layers;
+package scc.layers;
 
 import java.util.Iterator;
 
@@ -23,6 +23,7 @@ public class CosmosDBLayer {
 	private static final String CHANNELS_CONTAINER = "Channels";
 
 	private static final String DELETED_USERS_CONTAINER = "DeletedUsers";
+	private static final String DELETED_MESSAGES_CONTAINER = "DeletedMessages";
 	private static final String DELETED_CHANNELS_CONTAINER = "DeletedChannels";
 
 	private static CosmosDBLayer instance;
@@ -67,14 +68,16 @@ public class CosmosDBLayer {
 		} else {
 			if (type.equals(UserDAO.class))
 				currentContainer = db.getContainer(DELETED_USERS_CONTAINER);
+			else if (type.equals(MessageDAO.class))
+				currentContainer = db.getContainer(DELETED_MESSAGES_CONTAINER);
 			else if (type.equals(ChannelDAO.class))
 				currentContainer = db.getContainer(DELETED_CHANNELS_CONTAINER);
 		}
 	}
 
-	public <T> CosmosItemResponse<Object> delById(String id, Class<T> type, boolean isFromDeleted) {
+	public <T> CosmosItemResponse<Object> delById(String id, String partKey, Class<T> type, boolean isFromDeleted) {
 		init(type, isFromDeleted);
-		PartitionKey key = new PartitionKey(id);
+		PartitionKey key = new PartitionKey(partKey);
 		return currentContainer.deleteItem(id, key, new CosmosItemRequestOptions());
 	}
 
@@ -91,6 +94,7 @@ public class CosmosDBLayer {
 	public <T> T getById(String id, Class<T> type, boolean isFromDeleted) {
 		init(type, isFromDeleted);
 		String container = type.getSimpleName().replace("DAO", "s");
+		container = isFromDeleted ? String.format("Deleted%s", container) : container;
 		CosmosPagedIterable<T> response = currentContainer.queryItems(
 				"SELECT * FROM " + container + " WHERE " + container + ".id=\"" + id + "\"",
 				new CosmosQueryRequestOptions(), type);
@@ -103,13 +107,14 @@ public class CosmosDBLayer {
 	public <T> CosmosPagedIterable<T> getAll(Class<T> type, boolean isFromDeleted) {
 		init(type, isFromDeleted);
 		String container = type.getSimpleName().replace("DAO", "s");
+		container = isFromDeleted ? String.format("Deleted%s", container) : container;
 		return currentContainer.queryItems("SELECT * FROM " + container, new CosmosQueryRequestOptions(), type);
 	}
 
-	public <T> CosmosItemResponse<T> patch(String id, Class<T> type, String field, String change) {
+	public <T> CosmosItemResponse<T> patch(String id, String partKey, Class<T> type, String field, String change) {
 		init(type, false);
 
-		PartitionKey key = new PartitionKey(id);
+		PartitionKey key = new PartitionKey(partKey);
 
 		CosmosPatchOperations patchOps = CosmosPatchOperations.create().replace(field, change);
 		return currentContainer.patchItem(id, key, patchOps, type);
@@ -134,12 +139,6 @@ public class CosmosDBLayer {
 		return currentContainer.patchItem(id, key, patchOps, type);
 	}
 
-	public <T> void updateDelUserMessages(String id, Class<T> type) {
-		init(type, false);
-		currentContainer.queryItems("UPDATE messages set userIDSender = -1 where messages.userIDSender == " + id,
-				new CosmosQueryRequestOptions(), type);
-	}
-
 	public <T> void deleteAllInPartition(Class<T> type, String partKey, boolean isFromDeleted) {
 		init(type, isFromDeleted);
 		PartitionKey partitionKey = new PartitionKey(partKey);
@@ -154,7 +153,12 @@ public class CosmosDBLayer {
 
 	public CosmosPagedIterable<MessageDAO> getAllMessagesByUser(String userId) {
 		init(MessageDAO.class, false);
-		return currentContainer.queryItems("SELECT * FROM Messages WHERE user = " + userId, new CosmosQueryRequestOptions(), MessageDAO.class); 
+		return currentContainer.queryItems("SELECT * FROM Messages WHERE Messages.user = \"" + userId + "\"", new CosmosQueryRequestOptions(), MessageDAO.class); 
+	}
+
+	public CosmosPagedIterable<MessageDAO> getMessageReplies(String messageId) {
+		init(MessageDAO.class, false);
+		return currentContainer.queryItems("SELECT * FROM Messages WHERE Messages.replyTo = \"" + messageId + "\"", new CosmosQueryRequestOptions(), MessageDAO.class); 
 	}
 
 	public void close() {
