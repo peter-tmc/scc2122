@@ -10,14 +10,14 @@ config:
      metricsProcessEndpoint : "myProcessEndpoint"  # function used to aggregate endpoints for statistics
   phases:
   - name: "Create messages"    # Create messages
-    arrivalCount: 10         
+    arrivalCount: 10
     duration: 20
 
 scenarios:
   - name: 'Create message'
     weight: 1
     flow:
-      - loop:                         # Let's create 2000 messages
+      - loop:                         # Let's create 200 messages 10 times
         - function: "selectUserSkewed"
         - post:                          # First: login as a user
             url: "/users/auth"
@@ -55,7 +55,6 @@ scenarios:
               user: "{{ user }}"
               text: "{{ msgText }}"
               imageId: "{{ imageId }}"
-            ifTrue: "channelId"
             afterResponse: "genNewMessageReply"
-            #fazer funcao que vai meter na message se o response status for entre 200 e <300 e vai buscar o id ao response mas o resto vai buscar ao context vars e mete no message.data
+            ifTrue: "channelId"
         count: 200

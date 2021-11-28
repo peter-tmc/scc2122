@@ -21,7 +21,11 @@ module.exports = {
 	deleteUserReply,
 	deleteChannelReply,
 	selectChannelSkewed,
-	genNewChannelReply
+	genNewChannelReply,
+	genNewMessageReply,
+	selectMessageSkewed,
+	getUserPassword,
+	deleteMessageReply
 }
 
 
@@ -184,18 +188,32 @@ function genNewChannelReply(requestParams, response, context, ee, next) {
 	return next()
 }
 
+// function genNewMessageBefore(requestParams, context, ee, next) {
+// 	let message = {
+// 			"id" : response.body,
+// 			"channel" : context.vars.channelId,
+// 			"user" : context.vars.user̈́,
+// 			"text" : context.vars.msgText,
+// 			"imageId" : context.vars.imageId
+// 		}
+// 	messages.push(message);
+// 	fs.writeFileSync('messages.data', JSON.stringify(messages));
+// 	return next()
+// }
+
 function genNewMessageReply(requestParams, response, context, ee, next) {
 	if (response.statusCode >= 200 && response.statusCode < 300 && response.body.length > 0) {
 		let message = {
-			"id": response.body,
-			"channel": context.vars.channelId,
-			"user": context.vars.user,
-			"text": context.vars.msgText,
-			"imageId": context.vars.imageId
-		} //pode ser erro
+			"id" : response.body,
+			"channel" : context.vars.channelId,
+			"user" : context.vars.user,
+			"text" : context.vars.msgText,
+			"imageId" : context.vars.imageId
+		}
 		messages.push(message);
 		fs.writeFileSync('messages.data', JSON.stringify(messages));
 	}
+	return next();
 }
 
 
@@ -218,6 +236,19 @@ function deleteChannelReply(requestParams, response, context, ee, next) {
 	}
 	return next()
 }
+
+function deleteMessageReply(requestParams, response, context, ee, next) {
+	if (response.statusCode >= 200 && response.statusCode < 300) {
+		messages = messages.filter(function (value, index, arr) {
+			return value.id != context.vars.id;
+		});
+		fs.writeFileSync('messages.data', JSON.stringify(messages));
+	}
+	
+	return next();
+}
+
+
 
 /**
  * Select user
@@ -243,6 +274,21 @@ function selectUserSkewed(context, events, done) {
 		let user = users.sampleSkewed()
 		context.vars.user = user.id
 		context.vars.pwd = user.pwd
+	} else {
+		delete context.vars.user
+		delete context.vars.pwd
+	}
+	return done()
+}
+
+/**
+ * Select user
+ */
+ function selectMessageSkewed(context, events, done) {
+	if (messages.length > 0) {
+		let message = messages.sampleSkewed()
+		context.vars.user = message.user
+		context.vars.id = message.id
 	} else {
 		delete context.vars.user
 		delete context.vars.pwd
@@ -379,7 +425,7 @@ function genNewMessage(context, events, done) {
 	} else {
 		delete context.vars.hasImage
 	}
-	context.vars.imageId = null
+	context.vars.imageId = null 
 	return done()
 }
 
@@ -400,6 +446,16 @@ function selectImagesIdFromMsgList(context, events, done) {
 	context.vars.imageIdLst = imageIdLst
 	return done()
 }
+
+function getUserPassword(context, events, done) {
+	let user = users.filter(function (currentValue, index, arr) {
+		return currentValue.id == context.vars.user;
+	}).pop();
+	context.vars.pwd = user.pwd;
+	return done();
+}
+
+
 
 /**
  * Return true with probability 50% 
