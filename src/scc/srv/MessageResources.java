@@ -7,6 +7,7 @@ import javax.ws.rs.core.Response.Status;
 import com.azure.cosmos.CosmosException;
 
 import java.util.Arrays;
+import java.util.List;
 import java.util.UUID;
 
 import javax.ws.rs.*;
@@ -24,6 +25,7 @@ public class MessageResources {
     private RedisCache cache = RedisCache.getInstance();
     private DataLayer data = DataLayer.getInstance();
     private CookieAuth auth = CookieAuth.getInstance();
+    private CognitiveSearchLayer cognitiveSearch = CognitiveSearchLayer.getInstance();
 
     /**
      * Creates a message given its id.
@@ -129,11 +131,22 @@ public class MessageResources {
     }
 
     // OPTIONAL - Azure Cognitive Search
-    // TODO
     @GET
-    @Path("/search")
+    @Path("/search/{channelId}")
     @Produces(MediaType.APPLICATION_JSON)
-    public String[] searchMessages(@QueryParam("query") String query) {
-        return null;
+    public List<Object> searchMessages(@CookieParam("scc:session") Cookie session, @PathParam("channelId") String channelId, @QueryParam("query") String query, @QueryParam("filter") String filter, @QueryParam("searchField") String searchField) {
+        Channel channel = data.get(channelId, Channel.class, ChannelDAO.class, false);
+        if(channel == null)
+            throw new WebApplicationException(Status.BAD_REQUEST);
+        String userId = auth.getSession(session);
+
+        if (userId == null || !Arrays.asList(channel.getMembers()).contains(userId))
+            throw new WebApplicationException(Status.UNAUTHORIZED);
+
+        if(channelId == null || query == null) {
+            throw new WebApplicationException(Status.BAD_REQUEST);
+        }
+        String filterDefinitive = (filter != null) ? filter + " and channel eq '" + channelId + "'" : "channel eq '" + channelId + "'";
+        return cognitiveSearch.query(query, filterDefinitive, searchField);
     }
 }

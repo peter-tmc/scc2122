@@ -12,3 +12,7 @@ artillery-tests/node_modules/
 *.data
 
 artillery-tests/debug
+
+search-azurekeys-westeurope.props
+
+search-azureprops-westeurope.sh
