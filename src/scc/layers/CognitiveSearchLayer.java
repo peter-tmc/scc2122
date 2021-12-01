@@ -40,31 +40,17 @@ public class CognitiveSearchLayer {
 		this.searchClient = searchClient;
 	}
 
-	public List<List<Map.Entry<String, Object>>> query(String queryText, String filter, String searchField) {
+	public List<List<Map.Entry<String, Object>>> query(String queryText, String filter) {
 
 		SearchOptions options = new SearchOptions()
 			.setIncludeTotalCount(true)
 			.setFilter(filter)
 			.setSelect("id", "user", "text")
+			.setSearchFields("text")
 			.setTop(5);
-
-		if(searchField != null)
-			options = options.setSearchFields(searchField);
 
 		SearchPagedIterable searchPagedIterable = searchClient.search(queryText, options, null);
 		
-		/*List<Object> results = new ArrayList<Object>();
-
-		for(SearchPagedResponse resultResponse : searchPagedIterable.iterableByPage()) {
-			resultResponse.getValue().forEach(searchResult -> {
-				for (Map.Entry<String, Object> res : searchResult
-						.getDocument(SearchDocument.class)
-						.entrySet()) {
-							results.add(res.getValue());
-			}});
-		}
-		return results;
-		*/
 		List<List<Map.Entry<String, Object>>> results = new ArrayList<List<Map.Entry<String, Object>>>();
 
 		for(SearchPagedResponse resultResponse : searchPagedIterable.iterableByPage()) {

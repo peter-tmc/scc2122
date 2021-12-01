@@ -117,17 +117,20 @@ public class UserResources {
      * @param id - id of the user to retrieve
      * @return the user
      */
+    @SuppressWarnings("unchecked")
     @GET
     @Path("/{id}")
     @Produces(MediaType.APPLICATION_JSON)
-    public User getUser(@PathParam("id") String id) {
+    public <T> T getUser(@CookieParam("scc:session") Cookie session, @PathParam("id") String id) {
+       
         User user = data.get(id, User.class, UserDAO.class, false);
 
         if (user == null) {
             throw new WebApplicationException(Status.NOT_FOUND);
         }
-
-        return user;
+        if(session == null || !auth.getSession(session).equals(id))
+            return (T) new UserProfile(user);
+        return (T) user;
     }
 
     /**
@@ -139,14 +142,14 @@ public class UserResources {
     @GET
     @Path("/")
     @Produces(MediaType.APPLICATION_JSON)
-    public List<User> listUsers() {
+    public List<UserProfile> listUsers() {
 
         CosmosPagedIterable<UserDAO> users = data.getAll(UserDAO.class, false);
 
-        List<User> l = new ArrayList<>();
+        List<UserProfile> l = new ArrayList<>();
         Iterator<UserDAO> it = users.iterator();
         while (it.hasNext()) {
-            l.add(new User(it.next()));
+            l.add(new UserProfile(it.next()));
         }
 
         return l;
@@ -160,10 +163,13 @@ public class UserResources {
     @GET
     @Path("/{id}/channels/list")
     @Produces(MediaType.APPLICATION_JSON)
-    public String[] listChannelsOfUser(@PathParam("id") String id) {
+    public <T> String[] listChannelsOfUser(@CookieParam("scc:session") Cookie session, @PathParam("id") String id) {
 
-        User u = getUser(id);
-        return u.getChannelIds();
+        T u = getUser(session, id);
+        if(u instanceof UserProfile) //if this returns a user profile then a user is trying to get the channels of another user
+            throw new WebApplicationException(Status.UNAUTHORIZED);
+        else 
+            return ((User)u).getChannelIds();
     }
 
     /**

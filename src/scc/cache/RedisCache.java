@@ -8,6 +8,9 @@ import redis.clients.jedis.Jedis;
 import redis.clients.jedis.JedisPool;
 import redis.clients.jedis.JedisPoolConfig;
 
+import java.util.Set;
+import redis.clients.jedis.Tuple;
+
 public class RedisCache {
 	
 	private static JedisPool instance;
@@ -138,6 +141,15 @@ public class RedisCache {
 	public String[] getTrendingChannels() {
 		try (Jedis jedis = RedisCache. getCachePool().getResource()) {
 			return (jedis.zrevrange("leaderboard", 0, 4).toArray(new String[5]));
+		}
+	}
+
+	public void updateTrending() {
+		try (Jedis jedis = RedisCache. getCachePool().getResource()) {
+			Set<Tuple> leaderboard = jedis.zrevrangeWithScores("leaderboard", 0, -1);
+			for(Tuple entry : leaderboard) {
+				jedis.zadd("leaderboard", entry.getScore() / 2, entry.getElement());
+			}
 		}
 	}
 }

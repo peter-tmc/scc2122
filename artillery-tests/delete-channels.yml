@@ -6,9 +6,6 @@
 #dar delete do canal
 
 
-
-
-
 config:
   target: 'https://scc2122appwesteurope54939.azurewebsites.net/rest'
   http:
@@ -38,6 +35,5 @@ scenarios:
               pwd: "{{ pwd }}"
         - delete:                          # Delete channel
             url: "/channels/{{ channel }}"
-
             afterResponse: "deleteChannelReply"
         count: 10

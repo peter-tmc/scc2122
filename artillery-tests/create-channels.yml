@@ -52,8 +52,8 @@ scenarios:
                 pwd: "{{ pwd }}"
           - put:                          # Subscribe     
               url: "/channels/{{ channelId }}/subscribe/{{ user }}"
-          count: 20
-        count: 10
+          count: 5
+        count: 20
       - loop:                            # let's create 45 private channels - 
         - function: "selectUserSkewed"
         - post:                          # First: login as a user
@@ -82,5 +82,5 @@ scenarios:
           - function: "selectUserSkewed"
           - put:                          # Add user to private channel   
               url: "/channels/{{ channelId }}/add/{{ user }}"
-          count: 10
-        count: 45
+          count: 3
+        count: 1

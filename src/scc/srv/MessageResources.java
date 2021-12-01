@@ -72,6 +72,9 @@ public class MessageResources {
             throw new WebApplicationException(e.getStatusCode());
         }
 
+        if(channel.isPublicChannel()) //only the public channels can be trending
+            cache.incrementLeaderboard(channel.getId());
+
         return randID;
     }
 
@@ -123,16 +126,13 @@ public class MessageResources {
         if (userId == null || !Arrays.asList(channel.getMembers()).contains(userId))
             throw new WebApplicationException(Status.UNAUTHORIZED);
 
-        if(channel.isPublicChannel()) //only the public channels can be trending
-            cache.incrementLeaderboard(channel.getId());
         return message;
     }
 
-    // OPTIONAL - Azure Cognitive Search
     @GET
     @Path("/search/{channelId}")
     @Produces(MediaType.APPLICATION_JSON)
-    public List<List<Map.Entry<String, Object>>> searchMessages(@CookieParam("scc:session") Cookie session, @PathParam("channelId") String channelId, @QueryParam("query") String query, @QueryParam("filter") String filter, @QueryParam("searchField") String searchField) {
+    public List<List<Map.Entry<String, Object>>> searchMessages(@CookieParam("scc:session") Cookie session, @PathParam("channelId") String channelId, @QueryParam("query") String query, @QueryParam("filter") String filter) {
         Channel channel = data.get(channelId, Channel.class, ChannelDAO.class, false);
         if(channel == null)
             throw new WebApplicationException(Status.BAD_REQUEST);
@@ -145,6 +145,6 @@ public class MessageResources {
             throw new WebApplicationException(Status.BAD_REQUEST);
         }
         String filterDefinitive = (filter != null) ? filter + " and channel eq '" + channelId + "'" : "channel eq '" + channelId + "'";
-        return cognitiveSearch.query(query, filterDefinitive, searchField);
+        return cognitiveSearch.query(query, filterDefinitive);
     }
 }

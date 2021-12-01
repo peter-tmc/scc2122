@@ -2,7 +2,7 @@
 # cria canal com os amigos
 # e eles trocam msgs
 # chateia se com eles 
-# apaga o canal e entao as msgs sao apagadas tb (o user gostava de confirmar isso se der)
+# apaga o canal e entao as mensagens sao apagadas tambem (o user gostava de confirmar isso se der)
 # 
 #outro cenario
 # um user, triste por  n ter amigos, decide procurar novos servers publicos
@@ -33,7 +33,7 @@ config:
 
 scenarios:
   - name: "Angry friend" 
-    weight: 6     #60% chance of executing
+    weight: 0     #60% chance of executing
     flow:
       - function: "genNewUser" #vamos criar 3 users
       - post: # o user 1
@@ -164,20 +164,21 @@ scenarios:
                 channel: "{{ channelId }}"
                 user: "{{ id3 }}"
                 text: "{{ msgText }}"
-        #whileTrue: "random70"
-        count: 20
+        whileTrue: "random70"
+      - post: #login user1
+          url: "/users/auth"
+          headers:
+            Content-Type: application/json
+          json:
+            id: "{{ id1 }}"
+            pwd: "{{ pass1 }}"
+      - delete:
+          url: "/channels/{{ channelId }}"
 
 
 
-# um user, triste por n ter amigos, decide procurar novos servers publicos
-# como tem vergonha de entrar com o seu proprio nome, decide dar update e trocar de nome e imadeID
-# procura nos trending o mais trending
-# e entra nele
-# le as ultimas mensagens e responde a que mais lhe agradou
-#
-# troca de nome antes
   - name: 'Sad friend'
-    weight: 4                          #this scenario executes with a 40% probability
+    weight: 1                          #this scenario executes with a 40% probability
     flow:
       - function: "genNewUser" 
       - post: # o user 1
@@ -204,20 +205,26 @@ scenarios:
             json: "$"
             as: "channelLst"
       - function: "selectChannelFromChannelLstSkewed"   # Select channel to read messages
+      - post: #login do user
+          url: "/users/auth"
+          headers:
+            Content-Type: application/json
+          json:
+            id: "{{ id }}"
+            pwd: "{{ pass }}"
       - put: # update do nome
-        url: "/users/id"
-        headers:
-          Content-Type: application/json
-        json:
-          id: "{{ id }}"
-          name: "Joaozinho"
-          pwd: "{{ pwd }}"
-          photoId: null
-          channelIds: []
+          url: "/users/{{ id }}"
+          headers:
+            Content-Type: application/json
+          json:
+            id: "{{ id }}"
+            name: "Joaozinho"
+            pwd: "{{ pwd }}"
+            photoId: null
+            channelIds: []
       - put: #damos subscribe do user no canal
           url: "/channels/{{ channelId }}/subscribe/{{ id }}"
-      - get:
-          #TODO                         
+      - get:                       
           url: "/channels/{{ channelId }}/messages?st=0&len=50"
           headers:
             Accept: application/json
@@ -233,7 +240,7 @@ scenarios:
             Accept: application/json
           json:                         
             channel: "{{ channelId }}"
-            user: "{{ user }}"
+            user: "{{ id }}"
             text: "Hello, nice to meet you"
       - loop:                                 # Post a reply to the most recent messages
         - function: "selectMessageFromMessageLst"
@@ -255,6 +262,6 @@ scenarios:
               Accept: application/json
             json:                         
               channel: "{{ channelId }}"
-              user: "{{ user }}"
+              user: "{{ id }}"
               text: "{{ msgText }}"
         whileTrue: "random50"

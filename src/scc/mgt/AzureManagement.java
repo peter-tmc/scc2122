@@ -55,13 +55,13 @@ public class AzureManagement {
 	static final boolean CREATE_REDIS = true;
 
 	// TODO: change your suffix and other names if you want
-	static final String MY_SUFFIX = "55584"; // Add your suffix here
+	static final String MY_SUFFIX = "54939"; // Add your suffix here
 	
 	static final String AZURE_COSMOSDB_NAME = "scc-backend-" + MY_SUFFIX;	// Cosmos DB account name
 	static final String AZURE_COSMOSDB_DATABASE = "scc2122db" + MY_SUFFIX;	// Cosmos DB database name
 	static final String[] BLOB_CONTAINERS = { "images" };	// Containers to add to the blob storage
 
-static final Region[] REGIONS = new Region[] { Region.EUROPE_WEST, Region.US_WEST }; // Define the regions to deploy resources here
+static final Region[] REGIONS = new Region[] { Region.EUROPE_WEST,  Region.US_WEST }; // Define the regions to deploy resources here
 	
 	// Name of resoruce group for each region
 	static final String[] AZURE_RG_REGIONS = Arrays.stream(REGIONS)

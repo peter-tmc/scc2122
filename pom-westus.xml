@@ -3,7 +3,7 @@
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">  
   <modelVersion>4.0.0</modelVersion>  
   <groupId>pt.unl.fct.di.scc</groupId>  
-  <artifactId>scc2122-rg-westeurope-54939</artifactId>  
+  <artifactId>scc2122-rg-westus-54939</artifactId>  
   <version>1.0</version>  
   <packaging>war</packaging>  
   <dependencies>
@@ -108,7 +108,7 @@
         <configuration> 
           <schemaVersion>V2</schemaVersion>  
           <pricingTier>B1</pricingTier>  
-          <region>westeurope</region>  
+          <region>westus</region>  
           <runtime> 
             <os>linux</os>  
             <javaVersion>java11</javaVersion>  
@@ -119,13 +119,13 @@
               <resource> 
                 <directory>${project.basedir}/target</directory>  
                 <includes> 
-                  <include>scc2122-rg-westeurope-54939-1.0.war</include> 
+                  <include>scc2122-rg-westus-54939-1.0.war</include> 
                 </includes> 
               </resource> 
             </resources> 
           </deployment>  
-          <resourceGroup>scc2122-rg-westeurope-54939</resourceGroup>  
-          <appName>scc2122appwesteurope54939</appName> 
+          <resourceGroup>scc2122-rg-westus-54939</resourceGroup>  
+          <appName>scc2122appwestus54939</appName> 
         </configuration> 
       </plugin>
     </plugins> 

@@ -101,6 +101,10 @@ public class DataLayer {
         return db.getAllByPartitionKey(typeDB, channelId, false);
     }
 
+    public CosmosPagedIterable<MessageDAO> getMessagesFromChannel(String channelId, int st, int len) {
+        return db.getMessagesFromChannel(channelId, st, len);
+    }
+
     public <T, U> void delChannelMessages(String channelId, Class<T> type, Class<U> typeDB) {
         CosmosPagedIterable<U> messages = db.getAllByPartitionKey(typeDB, channelId, false);
         for(U m : messages) {

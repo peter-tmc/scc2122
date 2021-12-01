@@ -12,10 +12,10 @@
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <java.version>11</java.version>
-        <functionAppName>scc2122funwesteurope54939</functionAppName>
-        <functionAppRegion>westeurope</functionAppRegion>
+        <functionAppName>scc2122funwestus54939</functionAppName>
+        <functionAppRegion>westus</functionAppRegion>
         <functionPricingTier>B1</functionPricingTier>
-        <functionResourceGroup>scc2122-rg-westeurope-54939</functionResourceGroup>
+        <functionResourceGroup>scc2122-rg-westus-54939</functionResourceGroup>
     </properties>
 
     <dependencies>

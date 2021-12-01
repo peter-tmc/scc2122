@@ -160,6 +160,6 @@ scenarios:
               capture:
                 - regexp: "(.+)"
                   as: "lastMsgId"
-        #whileTrue: "random70"
-        count: 20
+        whileTrue: "random70"
+
 

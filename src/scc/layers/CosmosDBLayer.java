@@ -133,8 +133,6 @@ public class CosmosDBLayer {
 		init(type, false);
 
 		PartitionKey key = new PartitionKey(id);
-
-		// CosmosItemResponse<T> item = currentContainer.readItem(id, key, type);
 		CosmosPatchOperations patchOps = CosmosPatchOperations.create().remove(field + "/" + index);
 		return currentContainer.patchItem(id, key, patchOps, type);
 	}
@@ -164,5 +162,10 @@ public class CosmosDBLayer {
 	public void close() {
 		client.close();
 	}
+
+    public CosmosPagedIterable<MessageDAO> getMessagesFromChannel(String channelId, int st, int len) {
+		init(MessageDAO.class, false);
+        return currentContainer.queryItems("SELECT * FROM Messages WHERE Messages.channel=\"" + channelId + "\" ORDER BY Messages._ts DESC OFFSET " + st + " LIMIT " + len, new CosmosQueryRequestOptions(), MessageDAO.class);
+    }
 
 }

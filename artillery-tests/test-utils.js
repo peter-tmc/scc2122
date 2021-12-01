@@ -43,17 +43,19 @@ let messages = []
 // All endpoints starting with the following prefixes will be aggregated in the same for the statistics
 var statsRegExpr = [[/.*\/rest\/media\/.*/, "GET", "/rest/media/*"],
 [/.*\/rest\/media/, "POST", "/rest/media"],
-[/.*\/rest\/user\/.*\/channels/, "GET", "/rest/user/*/channels"],
-[/.*\/rest\/user\/.*/, "GET", "/rest/user/*"],
-[/.*\/rest\/user\/.*\/subscribe\/.*/, "POST", "/rest/user/*/subscribe/*"],
-[/.*\/rest\/user\/auth/, "POST", "/rest/user/auth"],
-[/.*\/rest\/user/, "POST", "/rest/user"],
-[/.*\/rest\/channel\/.*\/add\/.*/, "POST", "/rest/channel/*/add/*"],
-[/.*\/rest\/channel/, "POST", "/rest/channel"],
-[/.*\/rest\/channel\/.*\/messages.*/, "GET", "/rest/channel/*/messages"],
-[/.*\/rest\/channel\/.*/, "GET", "/rest/channel/*"],
+[/.*\/rest\/users\/.*\/channels/, "GET", "/rest/users/*/channels"],
+[/.*\/rest\/users\/.*/, "GET", "/rest/users/*"],
+[/.*\/rest\/channels\/.*\/subscribe\/.*/, "PUT", "/rest/users/*/subscribe/*"],
+[/.*\/rest\/users\/auth/, "POST", "/rest/users/auth"],
+[/.*\/rest\/users/, "POST", "/rest/users"],
+[/.*\/rest\/users/, "PUT", "/rest/users"],
+[/.*\/rest\/channels\/.*\/add\/.*/, "PUT", "/rest/channels/*/add/*"],
+[/.*\/rest\/channels/, "POST", "/rest/channels"],
+[/.*\/rest\/channels\/.*\/messages.*/, "GET", "/rest/channels/*/messages"],
+[/.*\/rest\/channels\/.*/, "GET", "/rest/channels/*"],
 [/.*\/rest\/messages/, "POST", "/rest/messages"],
-[/.*\/rest\/messages\/.*/, "GET", "/rest/messages/*"]
+[/.*\/rest\/messages\/.*/, "GET", "/rest/messages/*"],
+[/.*\/rest\/channels\/.*/, "DELETE", "/rest/channels/*"],
 ]
 
 // Function used to compress statistics

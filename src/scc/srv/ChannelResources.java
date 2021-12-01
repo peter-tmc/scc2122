@@ -157,7 +157,7 @@ public class ChannelResources {
         if (userId == null || !Arrays.asList(channel.getMembers()).contains(userId))
             throw new WebApplicationException(Status.UNAUTHORIZED);
     
-        CosmosPagedIterable<MessageDAO> messages = data.getPartition(id, Message.class, MessageDAO.class);
+        CosmosPagedIterable<MessageDAO> messages = data.getMessagesFromChannel(id, st, len);
 
         List<Message> l = new ArrayList<>();
         Iterator<MessageDAO> it = messages.iterator();
@@ -165,10 +165,7 @@ public class ChannelResources {
             l.add(new Message(it.next()));
         }
 
-        int first = (st == null) ? 0 : st;
-        int last = (len == null) ? l.size() : st+len-1;
-
-        return l.subList(first, last);
+        return l;
     }
 
     /**
@@ -266,8 +263,7 @@ public class ChannelResources {
         String userId = user.getId();
 
         if (Arrays.asList(channel.getMembers()).contains(userId)) 
-            return; // return so the user thinks that he was added even tho he was already there
-            //throw new WebApplicationException(Status.BAD_REQUEST);
+            return; // return so the user thinks that he was added even though he was already there
 
         data.patchAdd(channelId, Channel.class, ChannelDAO.class, "/members", userId);
         data.patchAdd(userId, User.class, UserDAO.class, "/channelIds", channelId);
@@ -282,7 +278,6 @@ public class ChannelResources {
 
         if (!membersList.contains(userId) || channel.getOwner().equals(userId)) {
             return;
-            //throw new WebApplicationException(Status.BAD_REQUEST);
         }
 
         data.patchRemove(channelId, Channel.class, ChannelDAO.class, "/members", membersList.indexOf(userId));

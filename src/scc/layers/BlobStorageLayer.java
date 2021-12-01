@@ -38,7 +38,6 @@ public class BlobStorageLayer {
 
 		BlobClient blob = containerClient.getBlobClient(id);
         if(!blob.exists()){
-            /* throw new WebApplicationException(Status.CONFLICT); */
 			blob.upload(BinaryData.fromBytes(media));
         }
 	}
