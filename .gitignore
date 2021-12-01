@@ -16,3 +16,7 @@ artillery-tests/debug
 search-azurekeys-westeurope.props
 
 search-azureprops-westeurope.sh
+
+azurekeys-westus.props
+
+azureprops-westus.sh

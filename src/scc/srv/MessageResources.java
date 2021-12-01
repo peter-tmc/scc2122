@@ -6,9 +6,7 @@ import javax.ws.rs.core.Response.Status;
 
 import com.azure.cosmos.CosmosException;
 
-import java.util.Arrays;
-import java.util.List;
-import java.util.UUID;
+import java.util.*;
 
 import javax.ws.rs.*;
 
@@ -134,7 +132,7 @@ public class MessageResources {
     @GET
     @Path("/search/{channelId}")
     @Produces(MediaType.APPLICATION_JSON)
-    public List<Object> searchMessages(@CookieParam("scc:session") Cookie session, @PathParam("channelId") String channelId, @QueryParam("query") String query, @QueryParam("filter") String filter, @QueryParam("searchField") String searchField) {
+    public List<List<Map.Entry<String, Object>>> searchMessages(@CookieParam("scc:session") Cookie session, @PathParam("channelId") String channelId, @QueryParam("query") String query, @QueryParam("filter") String filter, @QueryParam("searchField") String searchField) {
         Channel channel = data.get(channelId, Channel.class, ChannelDAO.class, false);
         if(channel == null)
             throw new WebApplicationException(Status.BAD_REQUEST);

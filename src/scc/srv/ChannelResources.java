@@ -145,7 +145,7 @@ public class ChannelResources {
     @GET
     @Path("/{id}/messages")
     @Produces(MediaType.APPLICATION_JSON)
-    public List<Message> getChannelMessages(@CookieParam("scc:session") Cookie session, @PathParam("id") String id) {
+    public List<Message> getChannelMessages(@CookieParam("scc:session") Cookie session, @PathParam("id") String id, @QueryParam("st") Integer st, @QueryParam("len") Integer len) {
 
         Channel channel = data.get(id, Channel.class, ChannelDAO.class, false);
         if(channel == null) {
@@ -165,7 +165,10 @@ public class ChannelResources {
             l.add(new Message(it.next()));
         }
 
-        return l;
+        int first = (st == null) ? 0 : st;
+        int last = (len == null) ? l.size() : st+len-1;
+
+        return l.subList(first, last);
     }
 
     /**
@@ -178,6 +181,12 @@ public class ChannelResources {
         return cache.getTrendingChannels();
     }
 
+    /**
+     * Subscribes given user to a given channel
+     * 
+     * @param id - id of the user that will subscribe
+     * @param id - id of the channel the user will subscribe to
+     */
     @PUT
     @Path("{channelId}/subscribe/{userId}")
     public void subChannel(@CookieParam("scc:session") Cookie session, @PathParam("userId") String userId, @PathParam("channelId") String channelId) {

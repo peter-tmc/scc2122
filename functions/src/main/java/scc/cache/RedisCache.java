@@ -104,4 +104,13 @@ public class RedisCache {
 			jedis.del(type.getSimpleName()+":" + id);
 		}
 	}
+
+	public void updateTrending() {
+		try (Jedis jedis = RedisCache. getCachePool().getResource()) {
+			Set<Tuple> leaderboard = jedis.zrevrangeWithScores("leaderboard", 0, -1);
+			for(Tuple entry : leaderboard) {
+				jedis.zadd("leaderboard", entry.getScore() / 2, entry.getElement());
+			}
+		}
+	}
 }

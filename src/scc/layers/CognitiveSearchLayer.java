@@ -40,7 +40,7 @@ public class CognitiveSearchLayer {
 		this.searchClient = searchClient;
 	}
 
-	public List<Object> query(String queryText, String filter, String searchField) {
+	public List<List<Map.Entry<String, Object>>> query(String queryText, String filter, String searchField) {
 
 		SearchOptions options = new SearchOptions()
 			.setIncludeTotalCount(true)
@@ -52,7 +52,8 @@ public class CognitiveSearchLayer {
 			options = options.setSearchFields(searchField);
 
 		SearchPagedIterable searchPagedIterable = searchClient.search(queryText, options, null);
-		List<Object> results = new ArrayList<Object>();
+		
+		/*List<Object> results = new ArrayList<Object>();
 
 		for(SearchPagedResponse resultResponse : searchPagedIterable.iterableByPage()) {
 			resultResponse.getValue().forEach(searchResult -> {
@@ -61,6 +62,21 @@ public class CognitiveSearchLayer {
 						.entrySet()) {
 							results.add(res.getValue());
 			}});
+		}
+		return results;
+		*/
+		List<List<Map.Entry<String, Object>>> results = new ArrayList<List<Map.Entry<String, Object>>>();
+
+		for(SearchPagedResponse resultResponse : searchPagedIterable.iterableByPage()) {
+			resultResponse.getValue().forEach(searchResult -> {
+				List<Map.Entry<String, Object>> message = new ArrayList<Map.Entry<String, Object>>();
+				for (Map.Entry<String, Object> res : searchResult
+						.getDocument(SearchDocument.class)
+						.entrySet()) {
+							message.add(res);
+				}
+				results.add(message);
+			});
 		}
 
 		return results;

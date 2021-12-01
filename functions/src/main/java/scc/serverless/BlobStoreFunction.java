@@ -1,4 +1,4 @@
-/*package scc.serverless;
+package scc.serverless;
 
 import com.microsoft.azure.functions.annotation.*;
 
@@ -7,13 +7,16 @@ import scc.cache.RedisCache;
 
 import com.microsoft.azure.functions.*;
 
+import com.azure.core.util.BinaryData;
+import com.azure.storage.blob.*;
 
-  Azure Functions with Blob Trigger.
- 
+/**
+ * Azure Functions with Blob Trigger.
+ */
 public class BlobStoreFunction
 {
-	@FunctionName("blobtest")
-	public void setLastBlobInfo(@BlobTrigger(name = "blobtest", 
+	@FunctionName("blobMonitor")
+	public void setLastBlobInfo(@BlobTrigger(name = "blobMonitor", 
 									dataType = "binary", 
 									path = "images/{name}", 
 									connection = "BlobStoreConnection") 
@@ -25,7 +28,17 @@ public class BlobStoreFunction
 			jedis.set("serverless::blob::name",
 					"Blob name : " + blobname + " ; size = " + (content == null ? "0" : content.length));
 		}
-	}
 
+		String connectionRemote = System.getenv("BlobStoreConnectionRemote");
+		
+		BlobContainerClient containerClient = new BlobContainerClientBuilder()
+				.connectionString(connectionRemote)
+				.containerName("images")
+				.buildClient();
+
+		BlobClient blob = containerClient.getBlobClient(blobname);
+		if (!blob.exists()) {
+			blob.upload(BinaryData.fromBytes(content));
+		}
+	}
 }
-*/
