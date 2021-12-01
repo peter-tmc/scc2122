@@ -25,7 +25,8 @@ module.exports = {
 	genNewMessageReply,
 	selectMessageSkewed,
 	getUserPassword,
-	deleteMessageReply
+	deleteMessageReply,
+	selectMessageFromMessageLst
 }
 
 
@@ -416,10 +417,10 @@ function selectMessageFromChannelSkewed(context, events, done) {
  * Select a channel from the list of channelIds in a user
  */
 function selectMessageFromMessageLst(context, events, done) {
-	if (typeof context.vars.channelLst !== 'undefined' && context.vars.channelLst.length > 0)
-		context.vars.channelId = context.vars.channelLst.sample()
+	if (typeof context.vars.msgList !== 'undefined' && context.vars.msgList.length > 0)
+		context.vars.msgId = context.vars.msgList.sample()
 	else
-		delete context.vars.channelId
+		delete context.vars.msgId
 	return done()
 }
 
