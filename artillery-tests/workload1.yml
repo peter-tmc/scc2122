@@ -38,9 +38,8 @@ scenarios:
               json: "$"
               as: "channelLst"
         - function: "selectChannelFromChannelLstSkewed"   # Select channel to read messages
-        - get:
-            #TODO  fazer o get messages dado um canal                       
-            url: "/channels/{{ channelId }}/messages"
+        - get:     
+            url: "/channels/{{ channelId }}/messages?st=0&len=50"
             headers:
               Accept: application/json
             capture: 
@@ -76,8 +75,7 @@ scenarios:
               json: "$"
               as: "channelLst"
         - function: "selectChannelFromChannelLstSkewed"   # Select channel to read messages
-        - get:
-            #TODO                         
+        - get:               
             url: "/channels/{{ channelId }}/messages?st=0&len=2"
             headers:
               Accept: application/json

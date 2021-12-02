@@ -40,4 +40,4 @@ scenarios:
               photoId: "{{ imageId }}"
               channelIds: []
             afterResponse: "genNewUserReply"    # capture result and store in file
-        count: 100
+        count: 25

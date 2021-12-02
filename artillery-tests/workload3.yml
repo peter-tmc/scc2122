@@ -2,11 +2,11 @@
 # cria canal com os amigos
 # e eles trocam msgs
 # chateia se com eles 
-# apaga o canal e entao as mensagens sao apagadas tambem (o user gostava de confirmar isso se der)
-# 
+# apaga o canal e entao as mensagens sao apagadas tambem
+
 #outro cenario
 # um user, triste por  n ter amigos, decide procurar novos servers publicos
-# como tem vergonha de entrar com o seu proprio nome, decide dar update e trocar de nome e imadeID
+# como tem vergonha de entrar com o seu proprio nome, decide dar update e trocar de nome
 # procura nos trending o mais trending
 # e entra nele
 # le as ultimas mensagens e responde a que mais lhe agradou
@@ -112,6 +112,19 @@ scenarios:
       - put: #o user1 adiciona o amigo user3 ao canal
           url: "/channels/{{ channelId }}/add/{{ id3 }}"
           #aqui
+      - function: "genNewMessage"
+      - post: #post msg user 3
+          url: "/messages"
+          headers:
+            Content-Type: application/json
+            Accept: application/json
+          json:
+            channel: "{{ channelId }}"
+            user: "{{ id1 }}"
+            text: "{{ msgText }}"
+          capture:
+            - regexp: "(.+)"
+              as: "lastMsgId"
       - loop: #comeca uma conversa no grupo
           - post: #login do user2
               url: "/users/auth"
@@ -120,6 +133,8 @@ scenarios:
               json:
                 id: "{{ id2 }}"
                 pwd: "{{ pass2 }}"
+          - get:
+              url: "/messages/{{ lastMsgId }}"
           - function: "genNewMessage"
           - post: #post msg do user 2
               url: "/messages"
@@ -130,6 +145,9 @@ scenarios:
                 channel: "{{ channelId }}"
                 user: "{{ id2 }}"
                 text: "{{ msgText }}"
+              capture:
+                - regexp: "(.+)"
+                  as: "lastMsgId"
           - post: #login user1
               url: "/users/auth"
               headers:
@@ -137,6 +155,8 @@ scenarios:
               json:
                 id: "{{ id1 }}"
                 pwd: "{{ pass1 }}"
+          - get:
+              url: "/messages/{{ lastMsgId }}"
           - function: "genNewMessage"
           - post: #post msg user 1
               url: "/messages"
@@ -147,6 +167,9 @@ scenarios:
                 channel: "{{ channelId }}"
                 user: "{{ id1 }}"
                 text: "{{ msgText }}"
+              capture:
+                - regexp: "(.+)"
+                  as: "lastMsgId"
           - post: #login user 3
               url: "/users/auth"
               headers:
@@ -154,6 +177,8 @@ scenarios:
               json:
                 id: "{{ id3 }}"
                 pwd: "{{ pass3 }}"
+          - get:
+              url: "/messages/{{ lastMsgId }}"
           - function: "genNewMessage"
           - post: #post msg user 3
               url: "/messages"
@@ -164,6 +189,9 @@ scenarios:
                 channel: "{{ channelId }}"
                 user: "{{ id3 }}"
                 text: "{{ msgText }}"
+              capture:
+                - regexp: "(.+)"
+                  as: "lastMsgId"
         whileTrue: "random70"
       - post: #login user1
           url: "/users/auth"
@@ -177,8 +205,8 @@ scenarios:
 
 
 
-  - name: 'Sad friend'
-    weight: 1                          #this scenario executes with a 40% probability
+  - name: 'Sad User'
+    weight: 4                          #this scenario executes with a 40% probability
     flow:
       - function: "genNewUser" 
       - post: # o user 1
@@ -264,4 +292,7 @@ scenarios:
               channel: "{{ channelId }}"
               user: "{{ id }}"
               text: "{{ msgText }}"
+              replyTo: "{{ msgId }}"
+              imageId: "{{ imageId }}"
+            ifTrue: "msgId"
         whileTrue: "random50"

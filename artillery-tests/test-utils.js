@@ -18,6 +18,7 @@ module.exports = {
 	selectImagesIdFromMsgList,
 	random50,
 	random70,
+	random80,
 	deleteUserReply,
 	deleteChannelReply,
 	selectChannelSkewed,
@@ -28,7 +29,6 @@ module.exports = {
 	deleteMessageReply,
 	selectMessageFromMessageLst
 }
-
 
 const Faker = require('faker')
 const fs = require('fs')
@@ -159,7 +159,7 @@ function selectImageToDownload(context, events, done) {
 function genNewUser(context, events, done) {
 	const first = `${Faker.name.firstName()}`
 	const last = `${Faker.name.lastName()}`
-	context.vars.id = first + "." + last
+	context.vars.id = first + "." + last + "." + Date.now()
 	context.vars.name = first + " " + last
 	context.vars.pwd = `${Faker.internet.password()}`
 	return done()
@@ -420,7 +420,7 @@ function selectMessageFromChannelSkewed(context, events, done) {
  */
 function selectMessageFromMessageLst(context, events, done) {
 	if (typeof context.vars.msgList !== 'undefined' && context.vars.msgList.length > 0)
-		context.vars.msgId = context.vars.msgList.sample()
+		context.vars.msgId = context.vars.msgList.sample().id
 	else
 		delete context.vars.msgId
 	return done()
@@ -496,3 +496,7 @@ function random70(context, next) {
 	return next(continueLooping);
 }
 
+function random80(context, next) {
+	const continueLooping = Math.random() < 0.80
+	return next(continueLooping);
+}

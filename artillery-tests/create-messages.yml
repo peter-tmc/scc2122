@@ -10,7 +10,7 @@ config:
      metricsProcessEndpoint : "myProcessEndpoint"  # function used to aggregate endpoints for statistics
   phases:
   - name: "Create messages"    # Create messages
-    arrivalCount: 10
+    arrivalCount: 1
     duration: 20
 
 scenarios:

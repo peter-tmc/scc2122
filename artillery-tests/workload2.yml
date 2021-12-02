@@ -124,6 +124,8 @@ scenarios:
                 id: "{{ id2 }}"
                 pwd: "{{ pass2 }}"
           - function: "genNewMessage"
+          - get:
+              url: "/messages/{{ lastMsgId }}"
           - post: #reply do user 2 a mensagem do user 1
               url: "/messages"
               headers:
@@ -145,6 +147,8 @@ scenarios:
               json:
                 id: "{{ id1 }}"
                 pwd: "{{ pass1 }}"
+          - get:
+              url: "/messages/{{ lastMsgId }}"
           - function: "genNewMessage"
           - post:
               url: "/messages"
@@ -160,6 +164,6 @@ scenarios:
               capture:
                 - regexp: "(.+)"
                   as: "lastMsgId"
-        whileTrue: "random70"
+        whileTrue: "random80"
 
 
